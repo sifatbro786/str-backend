@@ -5,7 +5,7 @@
  *
  * Security: only whitelisted fields are allowed through the filter to prevent
  * clients from querying/sorting arbitrary internal fields. Combine with
- * express-mongo-sanitize (app-level) to neutralize operator injection.
+ * the app-level sanitize middleware to neutralize operator injection.
  *
  * Usage:
  *   const features = new ApiFeatures(Project.find(), req.query, {
@@ -30,6 +30,9 @@ export default class ApiFeatures {
       maxLimit: options.maxLimit ?? 100,
       defaultLimit: options.defaultLimit ?? 12,
     };
+    // Filter already baked into the query by the caller (e.g. { isPublished: true }).
+    // Kept separately so the count query matches the find query exactly.
+    this.baseFilter = options.baseFilter ?? {};
     // Filled by paginate() so the caller can build pagination metadata.
     this.pagination = { page: 1, limit: this.options.defaultLimit, skip: 0 };
     this._filter = {};
@@ -126,9 +129,10 @@ export default class ApiFeatures {
 
   /** Runs the built query and a matching countDocuments in parallel. */
   async execWithCount() {
+    const countFilter = { ...this.baseFilter, ...this._filter };
     const [docs, total] = await Promise.all([
       this.query.lean().exec(),
-      this.model.countDocuments(this._filter).exec(),
+      this.model.countDocuments(countFilter).exec(),
     ]);
     return [docs, total];
   }

@@ -19,3 +19,12 @@ export const authLimiter = rateLimit({
   skipSuccessfulRequests: true,
   message: { success: false, message: "Too many attempts, please try again later." },
 });
+
+/** Anti-spam limiter for the public contact form (POST /api/inquiries). */
+export const contactLimiter = rateLimit({
+  windowMs: env.rateLimit.windowMs,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: "Too many submissions, please try again later." },
+});

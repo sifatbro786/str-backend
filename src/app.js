@@ -4,10 +4,10 @@ import helmet from "helmet";
 import hpp from "hpp";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
-import mongoSanitize from "express-mongo-sanitize";
 
 import env from "./config/env.js";
 import routes from "./routes/index.js";
+import sanitize from "./middleware/sanitize.js";
 import notFound from "./middleware/notFound.js";
 import errorHandler from "./middleware/errorHandler.js";
 import { globalLimiter } from "./middleware/rateLimiters.js";
@@ -43,7 +43,7 @@ app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 app.use(cookieParser());
 
 // Sanitization against NoSQL operator injection ($, .) and HTTP param pollution.
-app.use(mongoSanitize());
+app.use(sanitize);
 app.use(hpp({ whitelist: ["tags", "sort", "fields"] }));
 
 // Request logging (concise in prod).
