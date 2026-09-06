@@ -17,7 +17,10 @@ const serviceSchema = new mongoose.Schema(
 );
 
 serviceSchema.pre("validate", function (next) {
-  if (this.isModified("title") || !this.slug) {
+  // An explicitly supplied slug wins over the derived one — see the longer
+  // note on the same hook in Project.js. Only the seeder uses that path; the
+  // admin API never sends `slug`.
+  if (!this.slug || (this.isModified("title") && !this.isModified("slug"))) {
     this.slug = slugify(this.title, { lower: true, strict: true });
   }
   next();

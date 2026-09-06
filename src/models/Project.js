@@ -122,7 +122,15 @@ projectSchema.set("toObject", { virtuals: true });
 // Slug is generated once and stays stable across title edits unless the title
 // itself changes, so published URLs (and their SEO) survive content edits.
 projectSchema.pre("validate", function (next) {
-  if (this.isModified("title") || !this.slug) {
+  // Derive the slug from the title, UNLESS the caller set one explicitly in the
+  // same operation. That exception exists for the seeder, which carries curated
+  // slugs ("terea-brand-growth-campaign") that read better than the generated
+  // form and must stay identical to the ones in str-frontend/lib/data.js, or
+  // the static fallback and the live site would serve different URLs.
+  //
+  // The admin API cannot reach this branch: handlerFactory strips `slug` from
+  // every update body, so a PATCH still re-derives via the hook below.
+  if (!this.slug || (this.isModified("title") && !this.isModified("slug"))) {
     this.slug = slugify(this.title, { lower: true, strict: true });
   }
   next();

@@ -24,7 +24,11 @@ const blogSchema = new mongoose.Schema(
 blogSchema.index({ isPublished: 1, publishedAt: -1 });
 
 blogSchema.pre("validate", function (next) {
-  if (this.isModified("title") || !this.slug) {
+  // An explicitly supplied slug wins over the derived one — see the longer note
+  // on the same hook in Project.js. This matters most here: an article title is
+  // a sentence, and slugifying it whole produces URLs like
+  // "your-nextjs-site-is-fast-on-your-laptop-and-slow-on-your-customers-phone".
+  if (!this.slug || (this.isModified("title") && !this.isModified("slug"))) {
     this.slug = slugify(this.title, { lower: true, strict: true });
   }
   next();
