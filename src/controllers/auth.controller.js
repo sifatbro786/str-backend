@@ -1,7 +1,7 @@
 import User from "../models/User.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import ApiError from "../utils/ApiError.js";
-import { sendTokenResponse } from "../utils/token.js";
+import { sendTokenResponse, cookieOptions } from "../utils/token.js";
 import env from "../config/env.js";
 
 /** POST /api/auth/login — public (rate limited). */
@@ -48,6 +48,7 @@ export const updatePassword = asyncHandler(async (req, res) => {
 
 /** POST /api/auth/logout — clears the auth cookie. */
 export const logout = asyncHandler(async (req, res) => {
-  res.clearCookie(env.jwt.cookieName, { path: "/" });
+  // Flags must match sendTokenResponse exactly or the browser keeps the cookie.
+  res.clearCookie(env.jwt.cookieName, cookieOptions());
   res.json({ success: true, message: "Logged out" });
 });

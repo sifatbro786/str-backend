@@ -23,4 +23,24 @@ serviceSchema.pre("validate", function (next) {
   next();
 });
 
+/**
+ * findOneAndUpdate does not fire pre('validate'), so a title change coming
+ * from the admin PATCH would otherwise keep the stale slug forever.
+ *
+ * Regenerating changes the public URL. That is the correct trade for an agency
+ * site where slugs are corrected shortly after publishing; if a redirect table
+ * is ever added, emit the old slug here instead of dropping it.
+ */
+serviceSchema.pre("findOneAndUpdate", function (next) {
+  const update = this.getUpdate() || {};
+  const title = update.title ?? update.$set?.title;
+  if (!title) return next();
+
+  const slug = slugify(title, { lower: true, strict: true });
+  if (update.$set) update.$set.slug = slug;
+  else update.slug = slug;
+  this.setUpdate(update);
+  next();
+});
+
 export default mongoose.model("Service", serviceSchema);

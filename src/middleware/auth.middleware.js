@@ -27,11 +27,18 @@ export const protect = asyncHandler(async (req, res, next) => {
     throw ApiError.unauthorized("Invalid or expired token");
   }
 
-  const user = await User.findById(decoded.sub).select("+password").lean();
+  // +passwordChangedAt only; the hash is never needed here, and pulling it into
+  // every authenticated request is one accidental res.json away from a leak.
+  const user = await User.findById(decoded.sub).select("+passwordChangedAt").lean();
   if (!user) throw ApiError.unauthorized("User no longer exists");
   if (user.status !== "active") throw ApiError.forbidden("Account is suspended");
 
-  delete user.password;
+  // Reject tokens minted before the last password change. `iat` is in seconds.
+  if (user.passwordChangedAt && decoded.iat * 1000 < user.passwordChangedAt.getTime()) {
+    throw ApiError.unauthorized("Session expired, please sign in again");
+  }
+
+  delete user.passwordChangedAt; // internal; never travels in req.user
   req.user = user;
   next();
 });

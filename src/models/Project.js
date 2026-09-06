@@ -1,6 +1,25 @@
 import mongoose from "mongoose";
 import slugify from "slugify";
 
+/**
+ * Canonical service taxonomy. Mirrors str-frontend/lib/taxonomy.js exactly —
+ * slugs on both sides come from slugify(title, { lower: true, strict: true }),
+ * so they cannot drift as long as this list and that one match.
+ *
+ * Phase 3 dropped `cloud-devops` and `cybersecurity` (never sold as standalone
+ * engagements) and added the three production disciplines the assets in
+ * str-frontend/public/ show STR actually delivers.
+ */
+export const SERVICE_TYPES = [
+  "web-development",
+  "custom-software",
+  "mobile-applications",
+  "product-design",
+  "graphics-design",
+  "architectural-visualization",
+  "digital-marketing",
+];
+
 const techStackSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
@@ -29,18 +48,18 @@ const projectSchema = new mongoose.Schema(
     clientName: { type: String, trim: true, default: "" },
     projectDate: { type: Date },
 
-    serviceType: {
-      type: String,
+    serviceTypes: {
+      type: [String],
       required: true,
       index: true,
-      enum: [
-        "web-development",
-        "mobile-app",
-        "ui-ux-design",
-        "custom-software",
-        "cloud-devops",
-        "cybersecurity",
-      ],
+      validate: {
+        validator: (v) => Array.isArray(v) && v.length > 0 && v.length <= 4,
+        message: "A project needs between 1 and 4 service types",
+      },
+      enum: {
+        values: SERVICE_TYPES,
+        message: "{VALUE} is not a supported service type",
+      },
     },
     tags: { type: [String], default: [], index: true },
 
@@ -82,12 +101,50 @@ const projectSchema = new mongoose.Schema(
 // Compound index backing the default "featured first, then manual order" sort.
 projectSchema.index({ featured: 1, displayOrder: 1 });
 
+// Backs the filtered public list: equality on serviceTypes, then the sort keys.
+// Without this, `?serviceTypes=x` + `sort(-featured -displayOrder)` does an
+// in-memory sort that hard-fails at the 32MB blocking-sort limit.
+projectSchema.index({ serviceTypes: 1, featured: -1, displayOrder: 1 });
+
+// Read-compat for any consumer still expecting the scalar field.
+//
+// NOTE: handlerFactory.getAll/getOne end in .lean(), and virtuals do not run on
+// lean documents — so `serviceType` appears on POST/PATCH responses and is
+// absent from GET responses. That asymmetry is deliberate: this virtual is a
+// safety net for internal code, not a public API guarantee. Never rely on
+// `serviceType` in a response body; read serviceTypes[0].
+projectSchema.virtual("serviceType").get(function () {
+  return this.serviceTypes?.[0] ?? null;
+});
+projectSchema.set("toJSON", { virtuals: true });
+projectSchema.set("toObject", { virtuals: true });
+
 // Slug is generated once and stays stable across title edits unless the title
 // itself changes, so published URLs (and their SEO) survive content edits.
 projectSchema.pre("validate", function (next) {
   if (this.isModified("title") || !this.slug) {
     this.slug = slugify(this.title, { lower: true, strict: true });
   }
+  next();
+});
+
+/**
+ * findOneAndUpdate does not fire pre('validate'), so a title change coming
+ * from the admin PATCH would otherwise keep the stale slug forever.
+ *
+ * Regenerating changes the public URL. That is the correct trade for an agency
+ * site where slugs are corrected shortly after publishing; if a redirect table
+ * is ever added, emit the old slug here instead of dropping it.
+ */
+projectSchema.pre("findOneAndUpdate", function (next) {
+  const update = this.getUpdate() || {};
+  const title = update.title ?? update.$set?.title;
+  if (!title) return next();
+
+  const slug = slugify(title, { lower: true, strict: true });
+  if (update.$set) update.$set.slug = slug;
+  else update.slug = slug;
+  this.setUpdate(update);
   next();
 });
 

@@ -9,6 +9,7 @@ import testimonialRoutes from "./testimonial.routes.js";
 import teamRoutes from "./team.routes.js";
 import inquiryRoutes from "./inquiry.routes.js";
 import pageMetaRoutes from "./pageMeta.routes.js";
+import statsRoutes from "./stats.routes.js";
 
 const router = Router();
 
@@ -23,5 +24,6 @@ router.use("/testimonials", testimonialRoutes);
 router.use("/team", teamRoutes);
 router.use("/inquiries", inquiryRoutes);
 router.use("/page-meta", pageMetaRoutes);
+router.use("/stats", statsRoutes);
 
 export default router;

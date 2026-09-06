@@ -7,7 +7,7 @@ const pageMetaSchema = new mongoose.Schema(
       required: true,
       unique: true,
       index: true,
-      enum: ["home", "about", "services", "projects", "contact"],
+      enum: ["home", "about", "services", "projects", "blogs", "contact"],
     },
     metaTitle: { type: String, default: "" },
     metaDescription: { type: String, default: "" },

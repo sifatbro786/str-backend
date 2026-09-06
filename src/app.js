@@ -18,9 +18,11 @@ import { globalLimiter } from "./middleware/rateLimiters.js";
  */
 const app = express();
 
-// Behind a proxy/load balancer (Render, Nginx) so rate-limit + secure cookies
-// see the real client IP and protocol.
-app.set("trust proxy", 1);
+// LB → (BFF) → Express. Each forwarding hop that appends to X-Forwarded-For
+// must be counted, or req.ip resolves to the proxy and every client shares
+// one rate-limit bucket. Never set this to `true` on a public host — it lets
+// a client spoof its own IP by sending X-Forwarded-For.
+app.set("trust proxy", env.trustProxyHops);
 app.disable("x-powered-by");
 
 // Security headers.
@@ -44,7 +46,9 @@ app.use(cookieParser());
 
 // Sanitization against NoSQL operator injection ($, .) and HTTP param pollution.
 app.use(sanitize);
-app.use(hpp({ whitelist: ["tags", "sort", "fields"] }));
+// Keys that are legitimately repeatable. Anything not listed here is collapsed
+// to its last value, which is the desired anti-pollution default.
+app.use(hpp({ whitelist: ["tags", "serviceTypes", "status", "category", "sort", "fields"] }));
 
 // Request logging (concise in prod).
 app.use(morgan(env.isProd ? "combined" : "dev"));
@@ -52,7 +56,9 @@ app.use(morgan(env.isProd ? "combined" : "dev"));
 // Rate limiting across the API.
 app.use("/api", globalLimiter);
 
-// API routes.
+// API routes. v1 is canonical; the unversioned mount is a deprecated alias
+// that will be removed in Phase 6. Both share the limiter above.
+app.use("/api/v1", routes);
 app.use("/api", routes);
 
 // Fallbacks.

@@ -38,11 +38,27 @@ blogSchema.pre("save", function (next) {
   next();
 });
 
-// ...and on findOneAndUpdate (admin PATCH toggling publish).
+/**
+ * ...and on findOneAndUpdate (admin PATCH toggling publish).
+ *
+ * Slug regeneration is merged into this same hook rather than registered as a
+ * second one, so the ordering of the two update rewrites is explicit: neither
+ * pre('validate') nor pre('save') fires on findOneAndUpdate, so a title change
+ * from the admin PATCH would otherwise keep the stale slug forever.
+ */
 blogSchema.pre("findOneAndUpdate", function (next) {
   const u = this.getUpdate() || {};
+
   if (u.isPublished === true) u.publishedAt = u.publishedAt || new Date();
   else if (u.isPublished === false) u.publishedAt = null;
+
+  const title = u.title ?? u.$set?.title;
+  if (title) {
+    const slug = slugify(title, { lower: true, strict: true });
+    if (u.$set) u.$set.slug = slug;
+    else u.slug = slug;
+  }
+
   this.setUpdate(u);
   next();
 });

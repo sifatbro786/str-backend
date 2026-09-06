@@ -25,6 +25,14 @@ const env = {
   nodeEnv: process.env.NODE_ENV ?? "development",
   port: toInt(process.env.PORT, 5025),
 
+  // Number of proxy hops that append to X-Forwarded-For in front of Express.
+  // Read by app.set("trust proxy", …); see PHASE-4-API-GUIDE §7.
+  trustProxyHops: toInt(process.env.TRUST_PROXY_HOPS, 1),
+
+  // Optional shared secret the Next BFF may send as x-internal-key. Empty
+  // means the check is disabled — see PHASE-4-API-GUIDE §7c.
+  internalApiKey: process.env.INTERNAL_API_KEY ?? "",
+
   // Comma-separated whitelist, e.g. "http://localhost:3000,https://strsltd.com"
   corsOrigins: (process.env.CORS_ORIGINS ?? "http://localhost:3000")
     .split(",")

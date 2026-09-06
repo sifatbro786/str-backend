@@ -45,10 +45,40 @@ export const createOne = (Model) =>
     res.status(201).json({ success: true, data: doc });
   });
 
-export const updateOne = (Model, { by = "_id" } = {}) =>
+/**
+ * Fields no client may ever set directly, regardless of role. Stripped before
+ * the update reaches Mongo. `slug` is here because it is derived from `title`
+ * by the pre-hooks — a hand-supplied slug would be silently overwritten on the
+ * next title edit, which is worse than rejecting it.
+ */
+const ALWAYS_IMMUTABLE = ["_id", "id", "__v", "createdAt", "updatedAt", "slug"];
+
+/** Shallow strip. Nested $-operators are already removed by middleware/sanitize. */
+function stripImmutable(body, extra = []) {
+  const blocked = new Set([...ALWAYS_IMMUTABLE, ...extra]);
+  const out = {};
+  for (const [k, v] of Object.entries(body ?? {})) {
+    if (!blocked.has(k)) out[k] = v;
+  }
+  return out;
+}
+
+export const updateOne = (Model, { by = "_id", immutable = [], allow = null } = {}) =>
   asyncHandler(async (req, res) => {
     const filter = by === "slug" ? { slug: req.params.slug } : { _id: req.params.id };
-    const doc = await Model.findOneAndUpdate(filter, req.body, {
+
+    // `allow` is an explicit allow-list for resources where the writable
+    // surface is much smaller than the schema (inquiries). Everything else
+    // uses the deny-list.
+    const payload = allow
+      ? Object.fromEntries(Object.entries(req.body ?? {}).filter(([k]) => allow.includes(k)))
+      : stripImmutable(req.body, immutable);
+
+    if (Object.keys(payload).length === 0) {
+      throw ApiError.badRequest("No updatable fields supplied");
+    }
+
+    const doc = await Model.findOneAndUpdate(filter, payload, {
       new: true,
       runValidators: true,
     });

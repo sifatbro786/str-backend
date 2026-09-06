@@ -12,5 +12,7 @@ export const listInquiries = factory.getAll(Inquiry, {
 });
 
 export const getInquiry = factory.getOne(Inquiry);
-export const updateInquiry = factory.updateOne(Inquiry); // status + internal notes
+// A lead is a record of what the client sent. Admins triage it; they do not
+// edit it. Only the two internal fields are writable.
+export const updateInquiry = factory.updateOne(Inquiry, { allow: ["status", "notes"] });
 export const deleteInquiry = factory.deleteOne(Inquiry);

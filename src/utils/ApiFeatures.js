@@ -9,7 +9,8 @@
  *
  * Usage:
  *   const features = new ApiFeatures(Project.find(), req.query, {
- *     allowedFilters: ["serviceType", "featured", "tags"],
+ *     allowedFilters: ["serviceTypes", "featured", "tags"],
+ *     arrayFilters: ["serviceTypes", "tags"],
  *     allowedSort: ["displayOrder", "projectDate", "createdAt"],
  *     defaultSort: "-displayOrder -createdAt",
  *     searchFields: ["title", "shortDescription", "clientName"],
@@ -24,6 +25,9 @@ export default class ApiFeatures {
     this.queryString = queryString;
     this.options = {
       allowedFilters: options.allowedFilters ?? [],
+      // Schema fields that are arrays. A scalar filter on one of these is
+      // normalized to $in so single- and multi-value filters behave identically.
+      arrayFilters: options.arrayFilters ?? [],
       allowedSort: options.allowedSort ?? [],
       defaultSort: options.defaultSort ?? "-createdAt",
       searchFields: options.searchFields ?? [],
@@ -38,7 +42,7 @@ export default class ApiFeatures {
     this._filter = {};
   }
 
-  /** Whitelisted equality + range filtering (gte|gt|lte|lt|in). */
+  /** Whitelisted equality + range filtering (gte|gt|lte|lt|in) + array $in. */
   filter() {
     const src = { ...this.queryString };
     const filter = {};
@@ -46,24 +50,45 @@ export default class ApiFeatures {
     for (const field of this.options.allowedFilters) {
       if (src[field] === undefined) continue;
       const raw = src[field];
+      const isArrayField = this.options.arrayFilters.includes(field);
+
+      // ?tags=react&tags=node → ["react","node"] (repeat params survive hpp
+      // only for whitelisted keys; see app.js). Must become $in, never an
+      // exact-array-equality match.
+      if (Array.isArray(raw)) {
+        const values = raw
+          .flatMap((v) => String(v).split(","))
+          .map((v) => castValue(v.trim()))
+          .filter((v) => v !== "");
+        if (values.length) filter[field] = { $in: values };
+        continue;
+      }
 
       // Range/set operators come in as objects: ?rating[gte]=4
-      if (raw !== null && typeof raw === "object" && !Array.isArray(raw)) {
+      if (raw !== null && typeof raw === "object") {
         const ops = {};
         for (const [op, val] of Object.entries(raw)) {
           if (["gte", "gt", "lte", "lt"].includes(op)) {
             ops[`$${op}`] = castValue(val);
           } else if (op === "in") {
-            ops.$in = String(val).split(",").map(castValue);
+            ops.$in = String(val)
+              .split(",")
+              .map((v) => castValue(v.trim()));
           }
         }
         if (Object.keys(ops).length) filter[field] = ops;
-      } else if (typeof raw === "string" && raw.includes(",")) {
-        // Comma list → $in (e.g. ?tags=react,node)
-        filter[field] = { $in: raw.split(",").map((v) => castValue(v.trim())) };
-      } else {
-        filter[field] = castValue(raw);
+        continue;
       }
+
+      // Comma list → $in (e.g. ?serviceTypes=web-development,graphics-design)
+      if (typeof raw === "string" && raw.includes(",")) {
+        filter[field] = { $in: raw.split(",").map((v) => castValue(v.trim())) };
+        continue;
+      }
+
+      // Single scalar. On an array field this is normalized to $in so the
+      // shape of the query is stable regardless of how many values arrived.
+      filter[field] = isArrayField ? { $in: [castValue(raw)] } : castValue(raw);
     }
 
     this._filter = filter;
@@ -151,7 +176,14 @@ export default class ApiFeatures {
   }
 }
 
-/** Coerce query-string primitives to boolean/number where unambiguous. */
+/**
+ * Coerce query-string primitives to boolean/number where unambiguous.
+ *
+ * Note on slugs: castValue("2d-3d") returns the string (Number("2d-3d") is
+ * NaN), which is correct. A hypothetical numeric-looking slug such as "2024"
+ * would be cast to a Number and never match — none of the current taxonomy
+ * slugs are numeric, so this is not worth a stringFilters escape hatch today.
+ */
 function castValue(v) {
   if (v === "true") return true;
   if (v === "false") return false;

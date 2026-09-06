@@ -23,6 +23,9 @@ const userSchema = new mongoose.Schema(
     permissions: { type: [String], default: [] },
     avatar: { type: String, default: "" },
     status: { type: String, enum: ["active", "suspended"], default: "active", index: true },
+    // Any token issued before this instant is rejected by `protect`. Set on
+    // every password change; select:false so it never rides along in payloads.
+    passwordChangedAt: { type: Date, select: false },
   },
   { timestamps: true }
 );
@@ -31,6 +34,9 @@ const userSchema = new mongoose.Schema(
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
   this.password = await bcrypt.hash(this.password, 12);
+  // 1s back-date: the JWT `iat` is second-resolution and can otherwise land in
+  // the same second as the write, invalidating the token we are about to issue.
+  if (!this.isNew) this.passwordChangedAt = new Date(Date.now() - 1000);
   next();
 });
 

@@ -46,11 +46,20 @@ export const listAllBlogs = factory.getAll(Blog, {
   populate: { path: "author", select: "name avatar" },
 });
 
+/**
+ * GET /api/v1/blogs/admin/id/:id — admin edit-form load. Unlike the public
+ * getBlog this does not require isPublished and does not touch viewCount.
+ */
+export const getBlogById = factory.getOne(Blog, {
+  populate: { path: "author", select: "name avatar" },
+});
+
 export const createBlog = asyncHandler(async (req, res) => {
   // Author is always the authenticated user; never taken from the body.
   const blog = await Blog.create({ ...req.body, author: req.user._id });
   res.status(201).json({ success: true, data: blog });
 });
 
-export const updateBlog = factory.updateOne(Blog);
+// author and viewCount are server-owned. A rename still re-slugs via the hook.
+export const updateBlog = factory.updateOne(Blog, { immutable: ["author", "viewCount"] });
 export const deleteBlog = factory.deleteOne(Blog);

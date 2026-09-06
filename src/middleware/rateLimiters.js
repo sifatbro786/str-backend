@@ -17,6 +17,13 @@ export const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: true,
+  // Per-identity, not per-IP: behind the BFF every request shares one IP, and
+  // an attacker on a botnet defeats IP keying anyway. IP is kept in the key so
+  // a single host cannot enumerate accounts either.
+  keyGenerator: (req) => {
+    const email = String(req.body?.email ?? "").toLowerCase().trim();
+    return `${req.ip}:${email}`;
+  },
   message: { success: false, message: "Too many attempts, please try again later." },
 });
 
