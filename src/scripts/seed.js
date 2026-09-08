@@ -30,6 +30,7 @@ import Team from "../models/Team.js";
 import Testimonial from "../models/Testimonial.js";
 import Blog from "../models/Blog.js";
 import PageMeta from "../models/PageMeta.js";
+import SiteContent from "../models/SiteContent.js";
 import Inquiry from "../models/Inquiry.js";
 
 import {
@@ -40,6 +41,7 @@ import {
   authors as authorsSeed,
   blogs as blogsSeed,
   pageMeta as pageMetaSeed,
+  siteContent as siteContentSeed,
   inquiries as inquiriesSeed,
 } from "../seed/index.js";
 
@@ -213,6 +215,7 @@ const OWNED = [
   ["Testimonials", Testimonial],
   ["Blogs", Blog],
   ["PageMeta", PageMeta],
+  ["SiteContent", SiteContent],
 ];
 
 async function wipe() {
@@ -304,6 +307,11 @@ async function run() {
   await upsertAll(PageMeta, pageMetaSeed, {
     label: "page meta",
     key: (d) => ({ pageIdentifier: d.pageIdentifier }),
+  });
+
+  await upsertAll(SiteContent, siteContentSeed, {
+    label: "site content",
+    key: (d) => ({ key: d.key }),
   });
 
   if (SKIP_INQUIRIES) {

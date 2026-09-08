@@ -21,4 +21,5 @@ export { default as testimonials } from "./testimonials.js";
 export { default as authors } from "./authors.js";
 export { default as blogs } from "./blogs.js";
 export { default as pageMeta } from "./pageMeta.js";
+export { default as siteContent } from "./siteContent.js";
 export { default as inquiries } from "./inquiries.js";
