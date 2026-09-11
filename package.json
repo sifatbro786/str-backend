@@ -12,7 +12,9 @@
     "seed": "node src/scripts/seed.js",
     "seed:fresh": "node src/scripts/seed.js --fresh",
     "seed:check": "node src/scripts/seed.js --dry",
-    "migrate:service-types": "node src/scripts/migrateServiceTypes.js"
+    "migrate:service-types": "node src/scripts/migrateServiceTypes.js",
+    "migrate:service-slugs": "node src/scripts/migrateServiceSlugs.js",
+    "push:services": "node src/scripts/pushServices.js"
   },
   "engines": {
     "node": ">=18.18.0"
@@ -31,6 +33,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.9.5",
     "morgan": "^1.10.0",
+    "multer": "^2.3.0",
     "slugify": "^1.6.6"
   },
   "devDependencies": {

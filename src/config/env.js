@@ -1,3 +1,4 @@
+import path from "node:path";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -49,6 +50,34 @@ const env = {
     cookieName: process.env.JWT_COOKIE_NAME ?? "str_token",
     // Cookie lifetime in days (kept in sync with expiresIn for the cookie path).
     cookieExpiresDays: toInt(process.env.JWT_COOKIE_EXPIRES_DAYS, 7),
+  },
+
+  /**
+   * Uploaded media.
+   *
+   * ⚑ EPHEMERAL FILESYSTEM WARNING — READ BEFORE DEPLOYING.
+   * `dir` is a path on the API host's own disk. On Render, Heroku, Fly and any
+   * container platform without a mounted volume, that disk is wiped on every
+   * deploy AND on every cold start, so uploaded images disappear without an
+   * error anywhere: the record still holds /uploads/services/x.webp and the
+   * file behind it is gone. To keep files on Render, attach a Persistent Disk
+   * and set UPLOAD_DIR to its mount path (for example /var/data/uploads).
+   * Without that disk, switch the storage engine in middleware/upload.js to an
+   * object store; nothing else in the codebase has to change, because the
+   * controller only ever returns a URL.
+   *
+   * Relative values resolve against the process working directory, which is
+   * the repo root under both `npm start` and `npm run dev`.
+   */
+  upload: {
+    dir: path.resolve(process.cwd(), process.env.UPLOAD_DIR ?? "uploads"),
+    // 5MB. Large enough for a 2400px wide WebP hero, small enough that a
+    // mistaken 40MB PNG export is rejected at the edge instead of filling the
+    // disk.
+    maxBytes: toInt(process.env.UPLOAD_MAX_BYTES, 5 * 1024 * 1024),
+    // Public mount point. Kept in one place because the controller builds the
+    // stored URL from it and app.js serves it from the same value.
+    publicPath: process.env.UPLOAD_PUBLIC_PATH ?? "/uploads",
   },
 
   // Rate limiting (global + auth-specific).

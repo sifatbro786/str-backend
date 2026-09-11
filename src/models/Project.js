@@ -9,15 +9,25 @@ import slugify from "slugify";
  * Phase 3 dropped `cloud-devops` and `cybersecurity` (never sold as standalone
  * engagements) and added the three production disciplines the assets in
  * str-frontend/public/ show STR actually delivers.
+ *
+ * ⚑ Phase 6 re-slugged this list to match the nine services the company
+ * actually sells. Six values were renamed and three are new. Existing project
+ * documents still carry the old values, so `npm run migrate:service-slugs`
+ * MUST run against any database seeded before this change: a document holding
+ * "web-development" now fails enum validation on its next save, which surfaces
+ * as a 400 on an unrelated admin edit rather than as anything that names this
+ * list. The old-to-new table lives in scripts/migrateServiceSlugs.js.
  */
 export const SERVICE_TYPES = [
-  "web-development",
-  "custom-software",
-  "mobile-applications",
-  "product-design",
-  "graphics-design",
-  "architectural-visualization",
+  "website-development",
+  "software-development",
+  "business-and-it-consultancy",
+  "graphic-design",
   "digital-marketing",
+  "data-science-and-analytics",
+  "2d-3d-design-and-animation",
+  "dashboard-development",
+  "mobile-app-development",
 ];
 
 const techStackSchema = new mongoose.Schema(

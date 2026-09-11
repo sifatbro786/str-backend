@@ -39,6 +39,45 @@ app.use(
   })
 );
 
+/**
+ * Uploaded media, served straight off disk.
+ *
+ * ── WHY THE CORP HEADER IS SET EXPLICITLY ────────────────────────────────
+ * helmet() above sets Cross-Origin-Resource-Policy: same-origin on everything.
+ * The site runs on a different origin from this API, so with that header the
+ * browser fetches each image, gets a 200, and then refuses to paint it. There
+ * is no console error worth the name and no network failure — the picture is
+ * simply blank, which is a genuinely slow bug to find. These are public
+ * marketing images; cross-origin is the correct policy for them, and it is
+ * scoped to this mount rather than relaxed globally.
+ *
+ * `nosniff` matters here specifically because the stored extension is derived
+ * from a client-declared mime type (see middleware/upload.js). Without it a
+ * file that sniffs as HTML would render as HTML on this origin.
+ *
+ * Mounted BEFORE the body parsers and outside the /api limiter: a static file
+ * has no body to parse, and image traffic must not consume an admin's request
+ * budget.
+ */
+app.use(
+  env.upload.publicPath,
+  express.static(env.upload.dir, {
+    index: false,
+    dotfiles: "ignore",
+    // Left to fall through so a deleted file lands on the shared notFound
+    // handler and answers the same JSON envelope as every other 404, rather
+    // than express.static's own HTML error page.
+    // Filenames carry 16 random hex characters and are never rewritten in
+    // place, so the bytes at a URL cannot change. `immutable` is honest here.
+    maxAge: "30d",
+    immutable: true,
+    setHeaders(res) {
+      res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+    },
+  })
+);
+
 // Body + cookie parsing with sane payload limits.
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true, limit: "1mb" }));

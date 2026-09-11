@@ -27,6 +27,20 @@ export const authLimiter = rateLimit({
   message: { success: false, message: "Too many attempts, please try again later." },
 });
 
+/**
+ * Upload limiter. Authenticated already, so this is not about abuse by
+ * strangers — it is about a stuck retry loop in the admin panel writing a few
+ * hundred files to a disk nobody is watching. Generous enough that a real
+ * editing session (nine services, a few re-crops each) never sees it.
+ */
+export const uploadLimiter = rateLimit({
+  windowMs: env.rateLimit.windowMs,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: "Too many uploads, please try again in a few minutes." },
+});
+
 /** Anti-spam limiter for the public contact form (POST /api/inquiries). */
 export const contactLimiter = rateLimit({
   windowMs: env.rateLimit.windowMs,

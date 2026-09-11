@@ -13,6 +13,14 @@ import { body } from "express-validator";
  * product rather than about the database — a 4,000-character short
  * description is a valid string and a broken card.
  *
+ * ── `icon` IS GONE ───────────────────────────────────────────────────────
+ * It held a lucide key that nothing on the frontend ever rendered, and it is
+ * replaced by `image` + `imageAlt` now that artwork is owned by the record
+ * instead of by SERVICE_MEDIA. A payload still carrying `icon` is not
+ * rejected here — Mongoose strict mode drops it — because the only sender
+ * would be a stale admin bundle mid-deploy, and 400ing that is a worse
+ * failure than ignoring one dead field.
+ *
  * ── WHY MAXLENGTHS ARE STRICTER THAN THE SCHEMA ──────────────────────────
  * The schema caps `title` at 120 because that is the point past which Mongo
  * should refuse. These caps are the point past which the DESIGN breaks:
@@ -41,7 +49,31 @@ const SHARED = [
   // someone mid-edit.
   body("detailedOverview").optional().isString(),
 
-  body("icon").optional().trim().isLength({ max: 40 }),
+  /**
+   * Either an uploaded path from POST /uploads ("/uploads/services/x.webp") or
+   * an absolute URL, and nothing else.
+   *
+   * The rejected shapes are the ones that actually get pasted in: a bare
+   * filename ("hero.webp") that resolves against whatever page is rendering,
+   * a Windows path from the file picker, and "//evil.tld/x.png", which is a
+   * protocol-relative URL that next/image would happily fetch from a host no
+   * remotePattern ever allowed. `optional({ values: "falsy" })` so clearing the
+   * field in the admin form sends "" and passes rather than 400ing.
+   */
+  body("image")
+    .optional({ values: "falsy" })
+    .trim()
+    .isLength({ max: 400 })
+    .withMessage("Image path must be 400 characters or fewer")
+    .bail()
+    .custom((v) => /^\/[A-Za-z0-9._~\-/]+$/.test(v) || /^https:\/\/[^\s]+$/i.test(v))
+    .withMessage("Image must be an uploaded path such as /uploads/services/file.webp, or an https URL"),
+
+  body("imageAlt")
+    .optional({ values: "falsy" })
+    .trim()
+    .isLength({ max: 160 })
+    .withMessage("Image alt text must be 160 characters or fewer"),
 
   body("deliverableTimeline")
     .optional()

@@ -21,9 +21,9 @@ export const projects = [
     "clientName": "Paarel Retail",
     "projectDate": "2025-03-18T00:00:00.000Z",
     "serviceTypes": [
-      "web-development",
-      "custom-software",
-      "product-design"
+      "website-development",
+      "software-development",
+      "graphic-design"
     ],
     "tags": [
       "E-Commerce",
@@ -122,8 +122,8 @@ export const projects = [
     "clientName": "Innoel Technology Ltd.",
     "projectDate": "2024-11-02T00:00:00.000Z",
     "serviceTypes": [
-      "web-development",
-      "custom-software"
+      "website-development",
+      "software-development"
     ],
     "tags": [
       "B2B",
@@ -211,8 +211,8 @@ export const projects = [
     "clientName": "Tiger Den Tourism",
     "projectDate": "2025-01-24T00:00:00.000Z",
     "serviceTypes": [
-      "web-development",
-      "product-design",
+      "website-development",
+      "graphic-design",
       "digital-marketing"
     ],
     "tags": [
@@ -306,9 +306,9 @@ export const projects = [
     "clientName": "Torgeson Services",
     "projectDate": "2024-08-14T00:00:00.000Z",
     "serviceTypes": [
-      "mobile-applications",
-      "custom-software",
-      "product-design"
+      "mobile-app-development",
+      "software-development",
+      "graphic-design"
     ],
     "tags": [
       "Field Service",
@@ -401,8 +401,8 @@ export const projects = [
     "clientName": "Riverside Developments",
     "projectDate": "2025-04-30T00:00:00.000Z",
     "serviceTypes": [
-      "architectural-visualization",
-      "graphics-design"
+      "2d-3d-design-and-animation",
+      "graphic-design"
     ],
     "tags": [
       "Real Estate",
@@ -496,7 +496,7 @@ export const projects = [
     "clientName": "SKH Sourcing",
     "projectDate": "2025-02-10T00:00:00.000Z",
     "serviceTypes": [
-      "graphics-design"
+      "graphic-design"
     ],
     "tags": [
       "Apparel",
@@ -574,8 +574,8 @@ export const projects = [
     "clientName": "London Youth Foundation",
     "projectDate": "2024-06-11T00:00:00.000Z",
     "serviceTypes": [
-      "web-development",
-      "product-design"
+      "website-development",
+      "graphic-design"
     ],
     "tags": [
       "Nonprofit",
@@ -664,7 +664,7 @@ export const projects = [
     "projectDate": "2025-05-19T00:00:00.000Z",
     "serviceTypes": [
       "digital-marketing",
-      "web-development"
+      "website-development"
     ],
     "tags": [
       "SEO",
@@ -742,8 +742,8 @@ export const projects = [
     "clientName": "Australian Cosmetic Clinic",
     "projectDate": "2024-09-27T00:00:00.000Z",
     "serviceTypes": [
-      "web-development",
-      "product-design"
+      "website-development",
+      "graphic-design"
     ],
     "tags": [
       "Healthcare",
@@ -826,9 +826,8 @@ export const projects = [
     "clientName": "The Foxes Studio",
     "projectDate": "2025-06-08T00:00:00.000Z",
     "serviceTypes": [
-      "product-design",
-      "web-development",
-      "graphics-design"
+      "graphic-design",
+      "website-development"
     ],
     "tags": [
       "Identity",

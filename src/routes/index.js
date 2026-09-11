@@ -11,6 +11,7 @@ import inquiryRoutes from "./inquiry.routes.js";
 import pageMetaRoutes from "./pageMeta.routes.js";
 import siteContentRoutes from "./siteContent.routes.js";
 import statsRoutes from "./stats.routes.js";
+import uploadRoutes from "./upload.routes.js";
 
 const router = Router();
 
@@ -27,5 +28,8 @@ router.use("/inquiries", inquiryRoutes);
 router.use("/page-meta", pageMetaRoutes);
 router.use("/site-content", siteContentRoutes);
 router.use("/stats", statsRoutes);
+// Writes only. The files themselves are served as static assets from
+// env.upload.publicPath in app.js, outside this router and outside the limiter.
+router.use("/uploads", uploadRoutes);
 
 export default router;
