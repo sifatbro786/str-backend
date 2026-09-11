@@ -1,5 +1,6 @@
 import { body } from "express-validator";
 import { SERVICE_TYPES } from "../models/Project.js";
+import { mediaField } from "./media.js";
 
 const URL_OPTS = { require_protocol: true };
 
@@ -26,8 +27,19 @@ export const createProjectRules = [
   body("tags").optional().isArray({ max: 24 }),
   body("techStack").optional().isArray({ max: 32 }),
   body("galleryImages").optional().isArray({ max: 40 }),
-  body("galleryImages.*.url").optional().isString().notEmpty(),
+  /* Was isString().notEmpty(), which accepted "asdf" and every other shape
+     that renders as a broken image. Now the same rule the single-image fields
+     use; see validators/media.js. */
+  mediaField("galleryImages.*.url"),
+  body("galleryImages.*.caption").optional().trim().isLength({ max: 200 }),
   body("galleryImages.*.layoutType").optional().isIn(["full", "half", "grid"]),
+
+  // Uploaded through POST /uploads from the admin form. ogImage is separate
+  // from coverImage because a 16:9 hero cropped to a 1.91:1 social card
+  // usually loses the part worth sharing.
+  mediaField("coverImage"),
+  mediaField("thumbnailImage"),
+  mediaField("ogImage"),
   ...["liveUrl", "githubUrl", "figmaUrl", "appStoreUrl", "playStoreUrl"].map((f) =>
     body(f).optional({ values: "falsy" }).isURL(URL_OPTS).withMessage(`${f} must be an absolute URL`)
   ),

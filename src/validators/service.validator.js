@@ -1,4 +1,5 @@
 import { body } from "express-validator";
+import { mediaField } from "./media.js";
 
 /**
  * Service write rules.
@@ -24,8 +25,8 @@ import { body } from "express-validator";
  * ── WHY MAXLENGTHS ARE STRICTER THAN THE SCHEMA ──────────────────────────
  * The schema caps `title` at 120 because that is the point past which Mongo
  * should refuse. These caps are the point past which the DESIGN breaks:
- * shortDescription is rendered in a card on /services and in the homepage
- * accordion, and past ~240 characters it pushes the row height out of the
+ * shortDescription is rendered in a card on /services and under the homepage
+ * preview frame, and past ~240 characters it pushes the row height out of the
  * grid. Validation is the right place to encode that, because it is the only
  * layer that can tell the author before they save.
  *
@@ -49,25 +50,9 @@ const SHARED = [
   // someone mid-edit.
   body("detailedOverview").optional().isString(),
 
-  /**
-   * Either an uploaded path from POST /uploads ("/uploads/services/x.webp") or
-   * an absolute URL, and nothing else.
-   *
-   * The rejected shapes are the ones that actually get pasted in: a bare
-   * filename ("hero.webp") that resolves against whatever page is rendering,
-   * a Windows path from the file picker, and "//evil.tld/x.png", which is a
-   * protocol-relative URL that next/image would happily fetch from a host no
-   * remotePattern ever allowed. `optional({ values: "falsy" })` so clearing the
-   * field in the admin form sends "" and passes rather than 400ing.
-   */
-  body("image")
-    .optional({ values: "falsy" })
-    .trim()
-    .isLength({ max: 400 })
-    .withMessage("Image path must be 400 characters or fewer")
-    .bail()
-    .custom((v) => /^\/[A-Za-z0-9._~\-/]+$/.test(v) || /^https:\/\/[^\s]+$/i.test(v))
-    .withMessage("Image must be an uploaded path such as /uploads/services/file.webp, or an https URL"),
+  // Shape rules live in validators/media.js — see the note there on why the
+  // accepted set is exactly "rooted path" or "https URL".
+  mediaField("image"),
 
   body("imageAlt")
     .optional({ values: "falsy" })

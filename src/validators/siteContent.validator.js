@@ -1,5 +1,6 @@
 import { body, param } from "express-validator";
 import { SITE_CONTENT_KEYS } from "../models/SiteContent.js";
+import { isMediaRef } from "./media.js";
 
 /**
  * SiteContent write rules.
@@ -38,6 +39,7 @@ import { SITE_CONTENT_KEYS } from "../models/SiteContent.js";
  *   required — must be present and non-empty
  *   optional — may be present
  *   numbers  — must be finite numbers when present
+ *   media    — must be an uploaded path or an https URL when present
  *   oneOf    — enumerated values, keyed by field
  */
 const SHAPES = {
@@ -61,6 +63,16 @@ const SHAPES = {
     required: ["title", "body"],
     optional: [],
     max: 8,
+  },
+  /* The client logo rail on the homepage and the client index on /about.
+     `logo` is an uploaded path; `media` below runs it through the same check
+     as Service.image so a row cannot carry a value next/image will refuse.
+     24 rather than 8: this is a marquee, and it is the one block that grows. */
+  partners: {
+    required: ["name"],
+    optional: ["logo", "sector", "work"],
+    media: ["logo"],
+    max: 24,
   },
 };
 
@@ -102,6 +114,15 @@ function validateItems(items, { req }) {
       if (item[field] === undefined || item[field] === "") continue;
       if (typeof item[field] !== "number" || !Number.isFinite(item[field])) {
         throw new Error(`${at}.${field} must be a number`);
+      }
+    }
+
+    for (const field of shape.media ?? []) {
+      if (item[field] === undefined || item[field] === "") continue;
+      if (typeof item[field] !== "string" || !isMediaRef(item[field])) {
+        throw new Error(
+          `${at}.${field} must be an uploaded path such as /uploads/partners/file.webp, or an https URL`
+        );
       }
     }
 

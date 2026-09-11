@@ -56,15 +56,22 @@ const env = {
    * Uploaded media.
    *
    * ⚑ EPHEMERAL FILESYSTEM WARNING — READ BEFORE DEPLOYING.
-   * `dir` is a path on the API host's own disk. On Render, Heroku, Fly and any
-   * container platform without a mounted volume, that disk is wiped on every
-   * deploy AND on every cold start, so uploaded images disappear without an
-   * error anywhere: the record still holds /uploads/services/x.webp and the
-   * file behind it is gone. To keep files on Render, attach a Persistent Disk
-   * and set UPLOAD_DIR to its mount path (for example /var/data/uploads).
-   * Without that disk, switch the storage engine in middleware/upload.js to an
-   * object store; nothing else in the codebase has to change, because the
-   * controller only ever returns a URL.
+   * `dir` is a path on the API host's own disk. That is exactly right on a VPS,
+   * which is where this is headed, and wrong on Render, which is where it runs
+   * today: a container platform without a mounted volume wipes the disk on
+   * every deploy AND on every cold start. Uploaded images then disappear with
+   * no error anywhere, because nothing is broken from the database's point of
+   * view — the record still holds /uploads/services/x.webp and only the file
+   * behind it is gone.
+   *
+   * On Render, attach a Persistent Disk and point UPLOAD_DIR at its mount path
+   * (for example /var/data/uploads). On the VPS, any path outside the deploy
+   * directory works; /var/www/str-uploads keeps it clear of a git checkout that
+   * gets replaced. Either way put it OUTSIDE the repo, or the next deploy
+   * overwrites the folder.
+   *
+   * The third option is an object store. Nothing outside middleware/upload.js
+   * would have to change, because the controller only ever returns a URL.
    *
    * Relative values resolve against the process working directory, which is
    * the repo root under both `npm start` and `npm run dev`.

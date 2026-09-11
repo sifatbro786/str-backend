@@ -29,7 +29,16 @@ import mongoose from "mongoose";
  * ever render and nobody will ever notice.
  */
 
-export const SITE_CONTENT_KEYS = ["metrics", "faqs", "process", "capabilities"];
+export const SITE_CONTENT_KEYS = [
+  "metrics",
+  "faqs",
+  "process",
+  "capabilities",
+  // `partners` carries a logo path per row, so it is the first block whose
+  // items reference an uploaded file. The shape validator checks that field
+  // with the same rule every other image field uses; see validators/media.js.
+  "partners",
+];
 
 const siteContentSchema = new mongoose.Schema(
   {

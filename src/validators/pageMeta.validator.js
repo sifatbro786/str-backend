@@ -1,4 +1,5 @@
 import { body, param } from "express-validator";
+import { mediaField } from "./media.js";
 
 /**
  * Page-meta write rules.
@@ -60,11 +61,10 @@ export const upsertPageMetaRules = [
      (protocol-relative, javascript:, data:) is rejected outright rather than
      normalised, because guessing at what an author meant is how a bad value
      survives into production looking intentional. */
-  body("ogImage")
-    .optional({ values: "falsy" })
-    .trim()
-    .custom((v) => /^https:\/\/[^\s]+$/i.test(v) || /^\/[^\s]*$/.test(v))
-    .withMessage("ogImage must be an absolute https URL or a path starting with /"),
+  /* Now the shared rule. The local one accepted /^\/[^\s]*$/, which passes
+     "/" and "/../../etc" — harmless in a meta tag, but it is the same field
+     the admin form now uploads into, and one definition beats two. */
+  mediaField("ogImage"),
 
   body("dynamicHeroHeadline")
     .optional({ values: "falsy" })

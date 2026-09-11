@@ -24,9 +24,9 @@ export const listSiteContent = asyncHandler(async (_req, res) => {
  * GET /api/v1/site-content/:key — public, one block.
  *
  * A key that exists in the enum but has no row yet returns an empty list, not
- * a 404. The frontend falls back to static content on any thrown error, and an
- * intentionally-empty block is not an error — 404 here would mean "the API is
- * broken" to lib/api.js when the truth is "nobody has filled this in".
+ * a 404. An intentionally-empty block is not an error, and since the frontend
+ * now throws on every non-404 it sees, answering 404 here would turn "nobody
+ * has filled this in" into a 500 on a public page.
  */
 export const getSiteContent = asyncHandler(async (req, res) => {
   const { key } = req.params;

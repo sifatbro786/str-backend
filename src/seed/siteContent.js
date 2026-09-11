@@ -1,16 +1,16 @@
 /**
- * The four marketing blocks that used to be hard-coded in
- * str-frontend/lib/data.js with no way to edit them without a deploy.
+ * The marketing blocks that were hard-coded in the frontend with no way to
+ * edit them without a deploy.
  *
- * Every value here is lifted VERBATIM from that file, so seeding this
- * collection changes nothing visible on the site — it only moves the same copy
- * behind /admin/site-content. If a string here differs from the one in
- * lib/data.js, the difference will show up as a silent content change the
- * first time the API is reachable, so keep them identical until the fallback
- * is retired.
+ * ⚑ str-frontend/lib/data.js IS GONE, and so is the fallback that read it.
+ * This file is no longer "a copy of the static content" — it is the ONLY
+ * source of these blocks. An unseeded database now means a homepage with no
+ * metrics band, no FAQ and no logo rail, rather than one quietly serving old
+ * copy. Run `npm run seed` against every environment, including production,
+ * before pointing a frontend at it.
  *
  * Keys must match the SiteContent enum exactly:
- * metrics · faqs · process · capabilities
+ * metrics · faqs · process · capabilities · partners
  *
  * Written by upsert on `key`, so re-running the seed refreshes these rows in
  * place and can never duplicate them.
@@ -125,6 +125,76 @@ export const siteContent = [
     ],
   },
 
+  /**
+   * Client logos. Lifted verbatim from the `partners` export that used to live
+   * in str-frontend/lib/site.js, which EcosystemBand and /about both read
+   * directly — adding a client meant a developer and a deploy.
+   *
+   * `logo` points at /public on the Next app, not at /uploads, because these
+   * eight files are already committed there and the frontend's mediaUrl()
+   * leaves a non-/uploads path alone. A logo replaced from /admin/site-content
+   * is uploaded to the API and stored as /uploads/partners/... instead; both
+   * shapes render, so there is no migration to do.
+   *
+   * ⚑ `work` and `sector` are reconstructed from each client's line of
+   * business rather than taken from a contract. That warning travelled with
+   * this data in lib/site.js and it still applies: confirm every label with
+   * the account owner before launch, because a wrong project label under a
+   * real client's logo is worse than no label at all.
+   */
+  {
+    key: "partners",
+    items: [
+      {
+        name: "AECL",
+        logo: "/logo/partners/aecl-logo.png",
+        sector: "Construction",
+        work: "Project control dashboard",
+      },
+      {
+        name: "Bay Developments",
+        logo: "/logo/partners/bay-logo.png",
+        sector: "Real estate",
+        work: "Property sales portal",
+      },
+      {
+        name: "GSP",
+        logo: "/logo/partners/gsp-logo.png",
+        sector: "Logistics",
+        work: "Shipment tracking suite",
+      },
+      {
+        name: "Daily Inqilab",
+        logo: "/logo/partners/inqilab-logo.png",
+        sector: "Media",
+        work: "News publishing platform",
+      },
+      {
+        name: "MH Group",
+        logo: "/logo/partners/mhgroup-logo.png",
+        sector: "Conglomerate",
+        work: "Group intranet & HRM",
+      },
+      {
+        name: "Ramy",
+        logo: "/logo/partners/ramy-logo.png",
+        sector: "Retail",
+        work: "E-commerce storefront",
+      },
+      {
+        name: "Vertex",
+        logo: "/logo/partners/vertex-logo.png",
+        sector: "Technology",
+        work: "Brand system & website",
+      },
+      {
+        name: "Wintex",
+        logo: "/logo/partners/wintex-logo.png",
+        sector: "Garments export",
+        work: "Export ERP",
+      },
+    ],
+  },
 ];
 
 export default siteContent;
