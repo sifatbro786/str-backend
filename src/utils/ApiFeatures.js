@@ -31,6 +31,9 @@ export default class ApiFeatures {
       allowedSort: options.allowedSort ?? [],
       defaultSort: options.defaultSort ?? "-createdAt",
       searchFields: options.searchFields ?? [],
+      // Schema paths a client may never project, whatever ?fields= says.
+      // See limitFields() for why this is a drop-list and not an exclusion.
+      deniedFields: options.deniedFields ?? [],
       maxLimit: options.maxLimit ?? 100,
       defaultLimit: options.defaultLimit ?? 12,
     };
@@ -128,11 +131,37 @@ export default class ApiFeatures {
     return this;
   }
 
-  /** Projection via ?fields=title,slug ; always drops __v. */
+  /**
+   * Projection via ?fields=title,slug ; always drops __v.
+   *
+   * ── WHY THE TOKENS ARE FILTERED ──────────────────────────────────────────
+   * Mongoose's `+field` syntax is the ONE thing that overrides `select: false`
+   * on a schema path. Passing ?fields= straight into .select() therefore hands
+   * the client a switch for every hidden field the model has — on User that is
+   * `?fields=+password`, which returns every bcrypt hash in the collection.
+   * `select: false` is not a projection default here, it is the protection, so
+   * nothing arriving from the query string may re-enable it.
+   *
+   * Denied names are dropped rather than appended as `-field` exclusions on
+   * purpose: Mongo rejects a projection that mixes inclusion and exclusion
+   * (`{name: 1, password: 0}` is an error, not a narrower projection). Dropping
+   * the token is enough — in an inclusion projection the field is simply never
+   * asked for, and in an exclusion projection `select: false` still hides it.
+   */
   limitFields() {
+    const denied = this.options.deniedFields ?? [];
+
     if (this.queryString.fields) {
-      const fields = this.queryString.fields.split(",").map((f) => f.trim()).join(" ");
-      this.query = this.query.select(fields);
+      const fields = String(this.queryString.fields)
+        .split(",")
+        .map((f) => f.trim())
+        .filter(Boolean)
+        .filter((f) => !f.startsWith("+"))
+        .filter((f) => !denied.includes(f.replace(/^-/, "")))
+        .join(" ");
+      // An all-denied ?fields= list must not collapse to select("") — that is
+      // "project everything", the opposite of what was asked for.
+      this.query = this.query.select(fields || "-__v");
     } else {
       this.query = this.query.select("-__v");
     }
