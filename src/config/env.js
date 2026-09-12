@@ -22,6 +22,11 @@ const toInt = (value, fallback) => {
   return Number.isNaN(n) ? fallback : n;
 };
 
+const toBool = (value, fallback) => {
+  if (value === undefined || value === "") return fallback;
+  return ["1", "true", "yes", "on"].includes(String(value).trim().toLowerCase());
+};
+
 const env = {
   nodeEnv: process.env.NODE_ENV ?? "development",
   port: toInt(process.env.PORT, 5025),
@@ -87,6 +92,62 @@ const env = {
     publicPath: process.env.UPLOAD_PUBLIC_PATH ?? "/uploads",
   },
 
+  /**
+   * Outbound mail (SMTP).
+   *
+   * ── GMAIL SPECIFICS, BECAUSE THEY COST HOURS OTHERWISE ───────────────────
+   * · SMTP_PASS must be a 16-character **App Password**, not the account
+   *   password. Google disabled basic auth for SMTP; the normal password
+   *   returns 535-5.7.8 "Username and Password not accepted" forever. App
+   *   Passwords require 2-Step Verification to be on for the account.
+   * · Google displays the App Password as four space-separated groups. The
+   *   spaces are presentation only — stripped below so a pasted value works
+   *   either way.
+   * · Port 465 = implicit TLS (`secure: true`). Port 587 = plaintext connect
+   *   then STARTTLS (`secure: false` + `requireTLS`). Mismatching the port and
+   *   the flag produces a silent hang until the socket timeout, not an auth
+   *   error — which is why `secure` is derived from the port unless it is set
+   *   explicitly. 465 is the default here: it fails fast on networks that
+   *   block it, whereas a blocked 587 tends to hang.
+   * · Gmail rewrites the From header to the authenticated account no matter
+   *   what is passed, so MAIL_FROM_EMAIL is only honoured if it is a verified
+   *   "Send mail as" alias. Leave it unset to use SMTP_USER.
+   * · Free Gmail caps at ~500 recipients/day. Each inquiry sends 2. Past a few
+   *   hundred leads a day this needs a real transactional provider (Resend,
+   *   SES, Postmark) — the transport swap is one file.
+   */
+  mail: (() => {
+    const port = toInt(process.env.SMTP_PORT, 465);
+    const user = process.env.SMTP_USER ?? "";
+    return {
+      host: process.env.SMTP_HOST ?? "smtp.gmail.com",
+      port,
+      secure: toBool(process.env.SMTP_SECURE, port === 465),
+      user,
+      // Google shows App Passwords as "abcd efgh ijkl mnop".
+      pass: (process.env.SMTP_PASS ?? "").replace(/\s+/g, ""),
+      fromName: process.env.MAIL_FROM_NAME ?? "STR Solutions Ltd.",
+      fromEmail: process.env.MAIL_FROM_EMAIL || user,
+      // Where the studio's copy of each lead lands.
+      adminEmail: process.env.ADMIN_EMAIL ?? "",
+      // Reply-to on the visitor's acknowledgement — the public inbox, not the
+      // SMTP account, so replies reach whoever is on duty.
+      replyTo: process.env.MAIL_REPLY_TO || process.env.ADMIN_EMAIL || user,
+    };
+  })(),
+
+  /** Company constants used by email templates (not by any API response). */
+  brand: {
+    legalName: process.env.BRAND_LEGAL_NAME ?? "STR Solutions Ltd.",
+    siteUrl: (process.env.SITE_URL ?? "https://strsltd.com").replace(/\/+$/, ""),
+    phone: process.env.BRAND_PHONE ?? "+880 1332-802026",
+    phoneHref: `tel:${(process.env.BRAND_PHONE ?? "+880 1332-802026").replace(/[^\d+]/g, "")}`,
+    hours: process.env.BRAND_HOURS ?? "Sat–Thu, 10:00–19:00 (GMT+6)",
+    blue: "#1476BE",
+    orange: "#EF5A28",
+    green: "#57B04A",
+  },
+
   // Rate limiting (global + auth-specific).
   rateLimit: {
     windowMs: toInt(process.env.RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000),
@@ -97,5 +158,11 @@ const env = {
 
 env.isProd = env.nodeEnv === "production";
 env.isTest = env.nodeEnv === "test";
+
+// Mail is optional infrastructure: the API boots and serves without it, and
+// inquiries are still stored. Anything mail-related checks this flag first.
+env.mail.enabled = Boolean(env.mail.host && env.mail.user && env.mail.pass);
+
+env.brand.adminInquiriesUrl = `${(process.env.ADMIN_URL ?? `${env.brand.siteUrl}/admin`).replace(/\/+$/, "")}/inquiries`;
 
 export default env;
