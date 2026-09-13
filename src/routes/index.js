@@ -4,6 +4,7 @@ import authRoutes from "./auth.routes.js";
 import userRoutes from "./user.routes.js";
 import projectRoutes from "./project.routes.js";
 import serviceRoutes from "./service.routes.js";
+import packageRoutes from "./package.routes.js";
 import blogRoutes from "./blog.routes.js";
 import testimonialRoutes from "./testimonial.routes.js";
 import teamRoutes from "./team.routes.js";
@@ -21,6 +22,9 @@ router.use("/auth", authRoutes);
 router.use("/users", userRoutes);
 router.use("/projects", projectRoutes);
 router.use("/services", serviceRoutes);
+/* Public GET / is the whole /packages page in one shaped response; everything
+   below it on this router is the dashboard. See package.routes.js. */
+router.use("/packages", packageRoutes);
 router.use("/blogs", blogRoutes);
 router.use("/testimonials", testimonialRoutes);
 router.use("/team", teamRoutes);

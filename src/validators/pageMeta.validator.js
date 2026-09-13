@@ -34,7 +34,16 @@ import { mediaField } from "./media.js";
 /* ⚑ Must match the schema enum in models/PageMeta.js and the admin list in
    str-frontend/app/(admin)/admin/page-meta/page.js. See the note on the
    schema field. */
-const IDENTIFIERS = ["home", "about", "services", "projects", "portfolio", "blogs", "contact"];
+const IDENTIFIERS = [
+  "home",
+  "about",
+  "services",
+  "projects",
+  "portfolio",
+  "packages",
+  "blogs",
+  "contact",
+];
 
 export const upsertPageMetaRules = [
   /* The route is an upsert keyed on this param, so it is the primary key of

@@ -12,7 +12,16 @@ const pageMetaSchema = new mongoose.Schema(
       // together: this one alone rejects the write at the schema, the
       // validator alone rejects it with a 400, and the admin list alone means
       // nobody can reach the editor for it.
-      enum: ["home", "about", "services", "projects", "portfolio", "blogs", "contact"],
+      enum: [
+        "home",
+        "about",
+        "services",
+        "projects",
+        "portfolio",
+        "packages",
+        "blogs",
+        "contact",
+      ],
     },
     metaTitle: { type: String, default: "" },
     metaDescription: { type: String, default: "" },
