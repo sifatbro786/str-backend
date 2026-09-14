@@ -9,7 +9,10 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "mail:check": "node src/scripts/mailCheck.js",
-    "seed:packages": "node src/seed/packages.seed.js"
+    "seed:packages": "node src/seed/packages.seed.js",
+    "seed:projects:media": "node src/seed/projects.shots.js",
+    "seed:projects": "node src/seed/projects.seed.js",
+    "seed:projects:publish": "node src/seed/projects.publish.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

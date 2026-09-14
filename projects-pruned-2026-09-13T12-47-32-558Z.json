@@ -1,0 +1,381 @@
+[
+  {
+    "_id": "6a9d5321cd24ab31bc601079",
+    "title": "Riverside Residences — Visualization Suite",
+    "slug": "riverside-residences-visualization-suite",
+    "subtitle": "Selling forty units off a plan set",
+    "shortDescription": "Full 2D/3D visualization package — coloured floor plans, interior stills and a walkthrough film — produced for a pre-launch sales campaign.",
+    "fullCaseStudy": "<h2>Brief</h2><p>Riverside needed to sell forty units before the structure topped out. All that existed was a CAD plan set and a materials schedule.</p>\n<h2>Production</h2><p>We produced monochrome and coloured 2D plans for the brochure, textured 3D plans for the listing portals, six interior stills per unit type, an exterior dusk study, and a ninety-second walkthrough. Everything was delivered in print CMYK and web sRGB from the same master.</p>\n<h2>Outcome</h2><p>The sales team ran the entire pre-launch on this package with no site photography at all.</p>",
+    "clientName": "Riverside Developments",
+    "projectDate": "2025-04-30T00:00:00.000Z",
+    "serviceTypes": [
+      "2d-3d-design-and-animation",
+      "graphic-design"
+    ],
+    "tags": [
+      "Real Estate",
+      "3D Render",
+      "Floor Plan",
+      "Walkthrough"
+    ],
+    "techStack": [
+      {
+        "name": "Blender",
+        "icon": "blender",
+        "category": "design"
+      },
+      {
+        "name": "V-Ray",
+        "icon": "vray",
+        "category": "design"
+      },
+      {
+        "name": "Photoshop",
+        "icon": "photoshop",
+        "category": "design"
+      }
+    ],
+    "deliverables": [
+      "12 coloured 2D floor plans",
+      "12 textured 3D floor plans",
+      "48 interior stills",
+      "Exterior dusk study",
+      "90-second walkthrough film"
+    ],
+    "liveUrl": "",
+    "githubUrl": "",
+    "figmaUrl": "",
+    "appStoreUrl": "",
+    "playStoreUrl": "",
+    "coverImage": "/2d-3d/3d-rendering.jpg",
+    "thumbnailImage": "/2d-3d/3d-floor-plan.jpg",
+    "galleryImages": [
+      {
+        "url": "/2d-3d/3d-rendering.jpg",
+        "caption": "Exterior, dusk study",
+        "layoutType": "full"
+      },
+      {
+        "url": "/2d-3d/2d-floor-plan-colour.png",
+        "caption": "Coloured 2D plan — Type A",
+        "layoutType": "grid"
+      },
+      {
+        "url": "/2d-3d/2d-floor-plan-mono.png",
+        "caption": "Monochrome plan for print",
+        "layoutType": "grid"
+      },
+      {
+        "url": "/2d-3d/2d-floor-plan-dual-unit.png",
+        "caption": "Dual-unit floor plate",
+        "layoutType": "grid"
+      },
+      {
+        "url": "/2d-3d/3d-interior.jpg",
+        "caption": "Living room, Type B",
+        "layoutType": "half"
+      },
+      {
+        "url": "/2d-3d/exterior-lighting.jpg",
+        "caption": "Facade lighting study",
+        "layoutType": "half"
+      },
+      {
+        "url": "/2d-3d/3d-animation-video.jpg",
+        "caption": "Walkthrough film still",
+        "layoutType": "full"
+      }
+    ],
+    "accentColor": "#EF5A28",
+    "layoutStyle": "bento",
+    "animationTrigger": "pinned-scroll",
+    "featured": true,
+    "displayOrder": 5,
+    "metaTitle": "Riverside Residences — 2D & 3D Visualization Suite",
+    "metaDescription": "Coloured floor plans, interior stills and a walkthrough film produced for a forty-unit pre-launch campaign.",
+    "ogImage": "/2d-3d/3d-rendering.jpg",
+    "createdAt": "2026-09-06T11:48:49.216Z",
+    "updatedAt": "2026-09-11T11:12:48.984Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a9d5321cd24ab31bc60107c",
+    "title": "SKH Sourcing — Catalogue Production",
+    "slug": "skh-sourcing-catalogue-production",
+    "subtitle": "11,400 images through a single QC gate",
+    "shortDescription": "Season-long apparel post-production: clipping paths, ghost mannequin composites and marketplace exports on a 48-hour SLA.",
+    "fullCaseStudy": "<h2>Scope</h2><p>Two seasons, 11,400 raw frames, four marketplace specifications, and a hard weekly drop date.</p>\n<h2>How it ran</h2><p>Every frame passed through a fixed pipeline — hand-drawn path, colour match against the physical swatch, ghost-mannequin composite where required, shadow rebuild, then a QC gate before batching. Rejects went back into the queue with an annotated note rather than a verbal comment.</p>\n<h2>Result</h2><p>Rejection rate at the client's end settled under 1.2%, and no weekly drop was missed.</p>",
+    "clientName": "SKH Sourcing",
+    "projectDate": "2025-02-10T00:00:00.000Z",
+    "serviceTypes": [
+      "graphic-design"
+    ],
+    "tags": [
+      "Apparel",
+      "Post Production",
+      "Ghost Mannequin",
+      "High Volume"
+    ],
+    "techStack": [
+      {
+        "name": "Photoshop",
+        "icon": "photoshop",
+        "category": "design"
+      }
+    ],
+    "deliverables": [
+      "11,400 hand-drawn clipping paths",
+      "3,200 ghost-mannequin composites",
+      "Shadow and reflection rebuild",
+      "Four marketplace export presets"
+    ],
+    "liveUrl": "https://skhsourcing.com",
+    "githubUrl": "",
+    "figmaUrl": "",
+    "appStoreUrl": "",
+    "playStoreUrl": "",
+    "coverImage": "/graphics/invisible-mannequin.jpg",
+    "thumbnailImage": "/graphics/clipping-path.jpg",
+    "galleryImages": [
+      {
+        "url": "/graphics/invisible-mannequin.jpg",
+        "caption": "Ghost mannequin composite",
+        "layoutType": "half"
+      },
+      {
+        "url": "/graphics/clipping-path.jpg",
+        "caption": "Hand-drawn path",
+        "layoutType": "half"
+      },
+      {
+        "url": "/graphics/image-masking.jpg",
+        "caption": "Channel mask — knitwear",
+        "layoutType": "grid"
+      },
+      {
+        "url": "/graphics/retouching.jpg",
+        "caption": "Retouch pass",
+        "layoutType": "grid"
+      },
+      {
+        "url": "/graphics/shadows-reflection.jpg",
+        "caption": "Shadow rebuild",
+        "layoutType": "grid"
+      },
+      {
+        "url": "/graphics/color-processing.jpg",
+        "caption": "Colour match to swatch",
+        "layoutType": "grid"
+      }
+    ],
+    "accentColor": "#57B04A",
+    "layoutStyle": "bento",
+    "animationTrigger": "fade-up",
+    "featured": false,
+    "displayOrder": 6,
+    "metaTitle": "SKH Sourcing — Apparel Catalogue Post-Production",
+    "metaDescription": "11,400 apparel frames through clipping path, ghost mannequin and marketplace export on a 48-hour SLA.",
+    "ogImage": "/graphics/invisible-mannequin.jpg",
+    "createdAt": "2026-09-06T11:48:49.341Z",
+    "updatedAt": "2026-09-11T11:12:49.105Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a9d5320cd24ab31bc601073",
+    "title": "Tiger Den Tourism",
+    "slug": "tiger-den-tourism",
+    "subtitle": "Booking for the Sundarbans, built for a patchy connection",
+    "shortDescription": "A tour-operator booking platform with seat inventory, partial payments and an itinerary builder that works offline on a boat.",
+    "fullCaseStudy": "<h2>Context</h2><p>Tiger Den runs multi-day Sundarbans expeditions. Guides on the water needed the manifest; head office needed live seat counts; travellers needed to pay a deposit now and the balance later.</p>\n<h2>Build</h2><p>Seat inventory is held server-side with a short soft-lock during checkout so two people cannot buy the last berth. Payments run through SSLCommerz with a scheduled-balance record rather than a second manual invoice. The guide view is a cached PWA — the manifest is readable with no signal.</p>\n<h2>Outcome</h2><p>Direct bookings grew from a small fraction of departures to the majority, and the manual reconciliation spreadsheet was retired.</p>",
+    "clientName": "Tiger Den Tourism",
+    "projectDate": "2025-01-24T00:00:00.000Z",
+    "serviceTypes": [
+      "website-development",
+      "graphic-design",
+      "digital-marketing"
+    ],
+    "tags": [
+      "Travel",
+      "Booking Engine",
+      "PWA",
+      "Payments"
+    ],
+    "techStack": [
+      {
+        "name": "Next.js",
+        "icon": "nextjs",
+        "category": "frontend"
+      },
+      {
+        "name": "Tailwind CSS",
+        "icon": "tailwind",
+        "category": "frontend"
+      },
+      {
+        "name": "Node.js",
+        "icon": "nodejs",
+        "category": "backend"
+      },
+      {
+        "name": "MongoDB",
+        "icon": "mongodb",
+        "category": "database"
+      },
+      {
+        "name": "SSLCommerz",
+        "icon": "sslcommerz",
+        "category": "integration"
+      },
+      {
+        "name": "GA4",
+        "icon": "analytics",
+        "category": "analytics"
+      },
+      {
+        "name": "Vercel",
+        "icon": "vercel",
+        "category": "devops"
+      }
+    ],
+    "deliverables": [
+      "Booking engine with soft-lock seat inventory",
+      "Deposit and scheduled-balance payments",
+      "Offline-capable guide manifest (PWA)",
+      "SEO foundation and landing pages"
+    ],
+    "liveUrl": "https://tigerdentourism.com",
+    "githubUrl": "",
+    "figmaUrl": "",
+    "appStoreUrl": "",
+    "playStoreUrl": "",
+    "coverImage": "/websites/tigerdentourism-website.png",
+    "thumbnailImage": "/websites/tigerdentourism-website.png",
+    "galleryImages": [
+      {
+        "url": "/websites/tigerdentourism-website.png",
+        "caption": "Departure detail page",
+        "layoutType": "full"
+      },
+      {
+        "url": "/websites/riverside-website.png",
+        "caption": "Itinerary builder",
+        "layoutType": "half"
+      },
+      {
+        "url": "/websites/the-foxes-website.png",
+        "caption": "Checkout, deposit step",
+        "layoutType": "half"
+      }
+    ],
+    "accentColor": "#57B04A",
+    "layoutStyle": "bento",
+    "animationTrigger": "fade-up",
+    "featured": true,
+    "displayOrder": 3,
+    "metaTitle": "Tiger Den Tourism — Sundarbans Booking Platform",
+    "metaDescription": "Seat inventory, partial payments and an offline guide manifest for a Sundarbans tour operator.",
+    "ogImage": "/websites/tigerdentourism-website.png",
+    "createdAt": "2026-09-06T11:48:48.959Z",
+    "updatedAt": "2026-09-11T11:12:48.742Z",
+    "__v": 0
+  },
+  {
+    "_id": "6a9d5321cd24ab31bc601076",
+    "title": "Torgeson Field Operations",
+    "slug": "torgeson-field-operations",
+    "subtitle": "Taking a 40-person field team off paper",
+    "shortDescription": "A React Native job-dispatch app with offline sync, photo evidence capture and a supervisor dashboard for scheduling.",
+    "fullCaseStudy": "<h2>The problem</h2><p>Job sheets went out on paper each morning and came back — sometimes — at the end of the week. Invoicing lagged the work by up to a month.</p>\n<h2>The app</h2><p>Technicians get the day's jobs on their phone, capture signatures and photo evidence, and mark completion. Everything queues locally and syncs when signal returns; conflicts resolve last-write-wins per field, not per record, so two partial edits merge instead of clobbering.</p>\n<h2>Result</h2><p>Invoicing moved from monthly to same-week. Disputed jobs fell sharply once every completion carried a timestamped photo.</p>",
+    "clientName": "Torgeson Services",
+    "projectDate": "2024-08-14T00:00:00.000Z",
+    "serviceTypes": [
+      "mobile-app-development",
+      "software-development",
+      "graphic-design"
+    ],
+    "tags": [
+      "Field Service",
+      "Offline First",
+      "Dispatch",
+      "Android"
+    ],
+    "techStack": [
+      {
+        "name": "React Native",
+        "icon": "react",
+        "category": "mobile"
+      },
+      {
+        "name": "Node.js",
+        "icon": "nodejs",
+        "category": "backend"
+      },
+      {
+        "name": "Express",
+        "icon": "express",
+        "category": "backend"
+      },
+      {
+        "name": "MongoDB",
+        "icon": "mongodb",
+        "category": "database"
+      },
+      {
+        "name": "Redis",
+        "icon": "redis",
+        "category": "database"
+      },
+      {
+        "name": "AWS",
+        "icon": "aws",
+        "category": "devops"
+      }
+    ],
+    "deliverables": [
+      "React Native app — Android & iOS",
+      "Offline sync engine with field-level merge",
+      "Supervisor scheduling dashboard",
+      "Photo evidence pipeline with S3 lifecycle rules"
+    ],
+    "liveUrl": "",
+    "githubUrl": "",
+    "figmaUrl": "",
+    "appStoreUrl": "",
+    "playStoreUrl": "",
+    "coverImage": "/websites/torgeson-website.png",
+    "thumbnailImage": "/websites/torgeson-website.png",
+    "galleryImages": [
+      {
+        "url": "/websites/torgeson-website.png",
+        "caption": "Supervisor dashboard",
+        "layoutType": "full"
+      },
+      {
+        "url": "/PPhoto.png",
+        "caption": "Technician job view",
+        "layoutType": "grid"
+      },
+      {
+        "url": "/websites/teds-website.png",
+        "caption": "Evidence capture",
+        "layoutType": "grid"
+      },
+      {
+        "url": "/websites/vera-website.png",
+        "caption": "Scheduling board",
+        "layoutType": "grid"
+      }
+    ],
+    "accentColor": "#1476BE",
+    "layoutStyle": "split",
+    "animationTrigger": "3d-tilt",
+    "featured": true,
+    "displayOrder": 4,
+    "metaTitle": "Torgeson Field Operations — Offline-First Dispatch App",
+    "metaDescription": "A React Native dispatch app with offline sync and photo evidence for a 40-person field team.",
+    "ogImage": "/websites/torgeson-website.png",
+    "createdAt": "2026-09-06T11:48:49.085Z",
+    "updatedAt": "2026-09-11T11:12:48.872Z",
+    "__v": 0
+  }
+]
