@@ -97,10 +97,28 @@ async function login() {
   return token;
 }
 
-/** Already on the remote disk under its own name? Nothing to upload, then. */
+/**
+ * Already on the remote disk under this exact path? Nothing to upload, then.
+ *
+ * ── WHY A RETRY ON A HEAD REQUEST ────────────────────────────────────────
+ * A failed request and a missing file are not the same thing, but this
+ * function collapses them into one boolean — and the caller reads `false` as
+ * "upload it". So a single dropped connection during a 70-image sweep costs a
+ * duplicate file on the host, and a slow host costs seventy. One retry turns
+ * the common transient case back into the right answer, which is worth more
+ * than the second or two it adds.
+ */
 async function servedAt(url) {
-  const res = await fetch(`${staticOrigin()}${url}`, { method: "HEAD" }).catch(() => null);
-  return res?.ok ?? false;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const res = await fetch(`${staticOrigin()}${url}`, {
+      method: "HEAD",
+      signal: AbortSignal.timeout(20_000),
+    }).catch(() => null);
+
+    if (res) return res.ok; // a real 404 is an answer; stop asking
+    if (attempt === 1) await sleep(1500);
+  }
+  return false;
 }
 
 /**
