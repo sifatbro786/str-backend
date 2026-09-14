@@ -1,17 +1,32 @@
 import { body } from "express-validator";
-import { SERVICE_TYPES } from "../models/Project.js";
+import { unknownServiceTypes } from "../utils/serviceTypes.js";
 import { mediaField } from "./media.js";
 
 const URL_OPTS = { require_protocol: true };
 
-/** Field rules shared by create and update; `required` differs per verb. */
+/**
+ * Field rules shared by create and update; `required` differs per verb.
+ *
+ * The membership check reads the Service collection rather than a literal
+ * array — see utils/serviceTypes.js for why the hardcoded list is gone. It
+ * names the offending values instead of printing the whole taxonomy, which
+ * used to produce a 400 body listing nine slugs and leaving the author to spot
+ * which of theirs was missing.
+ */
 const serviceTypesRule = (chain) =>
   chain
     .isArray({ min: 1, max: 4 })
     .withMessage("serviceTypes must contain 1–4 values")
     .bail()
-    .custom((arr) => arr.every((v) => SERVICE_TYPES.includes(v)))
-    .withMessage(`serviceTypes must be a subset of: ${SERVICE_TYPES.join(", ")}`);
+    .custom(async (arr) => {
+      const unknown = await unknownServiceTypes(arr);
+      if (unknown.length > 0) {
+        throw new Error(
+          `Not a service: ${unknown.join(", ")}. Create it at /admin/services first.`
+        );
+      }
+      return true;
+    });
 
 export const createProjectRules = [
   body("title").trim().notEmpty().withMessage("Title required").isLength({ max: 160 }),

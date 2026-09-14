@@ -1,34 +1,25 @@
 import mongoose from "mongoose";
 import slugify from "slugify";
 
+import { areServiceTypes } from "../utils/serviceTypes.js";
+
 /**
- * Canonical service taxonomy. Mirrors str-frontend/lib/taxonomy.js exactly —
- * slugs on both sides come from slugify(title, { lower: true, strict: true }),
- * so they cannot drift as long as this list and that one match.
+ * ── THE SERVICE TAXONOMY IS NOT A LIST IN THIS FILE ANY MORE ─────────────
+ * It used to be: a hardcoded array here, mirrored by a second hardcoded array
+ * in str-frontend/lib/taxonomy.js. Both had to be edited and deployed before a
+ * new discipline existed, so adding one from /admin/services produced a
+ * service that could not be attached to any project — invisible in the project
+ * form's checkbox grid, and rejected with a 400 by this enum if it was sent
+ * anyway. Nothing said why.
  *
- * Phase 3 dropped `cloud-devops` and `cybersecurity` (never sold as standalone
- * engagements) and added the three production disciplines the assets in
- * str-frontend/public/ show STR actually delivers.
+ * The Service collection is the list. `serviceTypes` are foreign keys into it
+ * (the case-study page links each to /services/<slug>), so they are validated
+ * against it at write time — see utils/serviceTypes.js.
  *
- * ⚑ Phase 6 re-slugged this list to match the nine services the company
- * actually sells. Six values were renamed and three are new. Existing project
- * documents still carry the old values, so `npm run migrate:service-slugs`
- * MUST run against any database seeded before this change: a document holding
- * "web-development" now fails enum validation on its next save, which surfaces
- * as a 400 on an unrelated admin edit rather than as anything that names this
- * list. The old-to-new table lives in scripts/migrateServiceSlugs.js.
+ * ⚑ There is no static export to import from here any more. Anything that
+ * needs the current values reads them from the collection; anything that needs
+ * them in a browser reads them from GET /services.
  */
-export const SERVICE_TYPES = [
-  "website-development",
-  "software-development",
-  "business-and-it-consultancy",
-  "graphic-design",
-  "digital-marketing",
-  "data-science-and-analytics",
-  "2d-3d-design-and-animation",
-  "dashboard-development",
-  "mobile-app-development",
-];
 
 const techStackSchema = new mongoose.Schema(
   {
@@ -62,14 +53,21 @@ const projectSchema = new mongoose.Schema(
       type: [String],
       required: true,
       index: true,
-      validate: {
-        validator: (v) => Array.isArray(v) && v.length > 0 && v.length <= 4,
-        message: "A project needs between 1 and 4 service types",
-      },
-      enum: {
-        values: SERVICE_TYPES,
-        message: "{VALUE} is not a supported service type",
-      },
+      /* Two rules, kept separate so the message names the actual problem.
+         The second is async because the answer lives in another collection;
+         it is cached, so a bulk seed does not pay for a query per document. */
+      validate: [
+        {
+          validator: (v) => Array.isArray(v) && v.length > 0 && v.length <= 4,
+          message: "A project needs between 1 and 4 service types",
+        },
+        {
+          validator: areServiceTypes,
+          message: ({ value }) =>
+            `serviceTypes must all be existing services. Unknown: ${(value ?? []).join(", ")}. ` +
+            `Add it at /admin/services first.`,
+        },
+      ],
     },
     tags: { type: [String], default: [], index: true },
 

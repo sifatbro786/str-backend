@@ -983,25 +983,29 @@ export const projects = [
 }
 
 /* A serviceType with no matching Service document renders a dead /services/
-   link on a published case study. The seeder re-checks this against the real
-   collection; this catches the typo without a database. */
+   link on a published case study.
+ *
+ * There is deliberately no list of valid slugs here any more. There used to
+ * be, copied from the enum in models/Project.js, and a third copy of a list
+ * that already exists in the Service collection is a third thing to forget to
+ * update — the reason a service added from the dashboard could not be used at
+ * all. The real check runs in projects.seed.js (`checkServiceLinks`) against
+ * the collection itself, and the model validates every write the same way.
+ *
+ * What is worth checking without a database is the shape, because these are
+ * the mistakes a literal in this file actually makes: a typo'd count, or a
+ * slug written in the wrong case or with spaces. */
 {
-  const seeded = new Set([
-    "website-development",
-    "software-development",
-    "mobile-app-development",
-    "graphic-design",
-    "digital-marketing",
-    "data-science-and-analytics",
-    "2d-3d-design-and-animation",
-    "dashboard-development",
-  ]);
+  const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
   for (const p of projects) {
+    if (p.serviceTypes.length < 1 || p.serviceTypes.length > 4) {
+      throw new Error(
+        `projects.data.js: "${p.slug}" has ${p.serviceTypes.length} serviceTypes; 1–4 allowed`
+      );
+    }
     for (const s of p.serviceTypes) {
-      if (!seeded.has(s)) {
-        throw new Error(
-          `projects.data.js: "${p.slug}" claims serviceType "${s}", which has no seeded Service — /services/${s} would 404`
-        );
+      if (!SLUG.test(s)) {
+        throw new Error(`projects.data.js: "${p.slug}" has a malformed serviceType "${s}"`);
       }
     }
   }
