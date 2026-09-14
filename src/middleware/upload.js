@@ -47,7 +47,15 @@ const ALLOWED = new Map([
   ["image/avif", ".avif"],
 ]);
 
-export const UPLOAD_FOLDERS = new Set(["services", "projects", "team", "blogs", "partners", "misc"]);
+export const UPLOAD_FOLDERS = new Set([
+  "services",
+  "projects",
+  "team",
+  "blogs",
+  "partners",
+  "testimonials",
+  "misc",
+]);
 
 /** Rejects an unknown folder before multer opens a write stream. */
 export function validateFolder(req, res, next) {
