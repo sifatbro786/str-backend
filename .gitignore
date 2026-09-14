@@ -13,3 +13,19 @@ npm-debug.log*
 # misc
 .DS_Store
 coverage
+
+# ─── uploaded media ──────────────────────────────────────────────────────
+# Runtime data, not source. Every image an editor adds through /admin lands
+# here, so tracking it means the repo and the server disagree about the folder
+# the moment anyone uses the dashboard — and the resolution is whichever side
+# runs `git checkout`, `reset --hard` or `clean -fd` first. That deletes live
+# images with no error anywhere: the database still holds the paths, the pages
+# just render the fallback logo.
+#
+# In production UPLOAD_DIR must point OUTSIDE this checkout (see
+# src/config/env.js). The local copy stays for seeding — `npm run
+# seed:projects:media` writes here, and `npm run seed:projects:publish` is how
+# it reaches a server.
+/uploads/
+# Bookkeeping written by the publisher: which local image is which remote file.
+/uploads/.publish-manifest.json
