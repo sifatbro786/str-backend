@@ -15,7 +15,7 @@ import env from "../../config/env.js";
  * · No web fonts: Gmail drops them. The stacks below fall back cleanly.
  */
 
-const C = {
+export const C = {
   paper: "#F4F2EE", // warm off-white page ground
   card: "#FFFFFF",
   line: "#E5E0D6",
@@ -28,11 +28,11 @@ const C = {
   green: env.brand.green,
 };
 
-const SANS =
+export const SANS =
   "-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Helvetica,Arial,sans-serif";
-const SERIF = "Georgia,'Times New Roman',Times,serif";
-const MONO = "'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace";
-const SCRIPT = "'Segoe Script','Bradley Hand','Brush Script MT',Georgia,cursive";
+export const SERIF = "Georgia,'Times New Roman',Times,serif";
+export const MONO = "'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace";
+export const SCRIPT = "'Segoe Script','Bradley Hand','Brush Script MT',Georgia,cursive";
 
 /** Entity-escape anything interpolated into HTML. Non-negotiable: `message` is
  *  attacker-controlled free text arriving from a public, unauthenticated form. */
@@ -46,7 +46,7 @@ export function escapeHtml(value) {
 }
 
 /** Escape, then promote newlines to <br> — used for the free-text message only. */
-function escapeMultiline(value) {
+export function escapeMultiline(value) {
   return escapeHtml(value).replace(/\r\n|\r|\n/g, "<br>");
 }
 
@@ -64,8 +64,13 @@ export function headerSafe(value, max = 120) {
 }
 
 /* ── shell ──────────────────────────────────────────────────────────────── */
+/* Exported from here rather than moved into a layout module: these are the
+   house email furniture and this file is where a reader looks for it. The
+   graphics-order pair in ./graphicsQuoteTemplates.js imports them so the two
+   families of message cannot drift into two different-looking emails from the
+   same company. Nothing outside src/utils/mail should import them. */
 
-function shell({ preheader, body }) {
+export function shell({ preheader, body }) {
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -101,7 +106,7 @@ function signalBar() {
 </tr></table></td></tr>`;
 }
 
-function masthead(eyebrow) {
+export function masthead(eyebrow) {
   return `<tr><td style="padding:30px 40px 0 40px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
 <td align="left" style="font-family:${MONO};font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:${C.ink};font-weight:700;">STR&nbsp;SOLUTIONS<span style="color:${C.orange};">.</span></td>
@@ -109,7 +114,7 @@ function masthead(eyebrow) {
 </tr></table></td></tr>`;
 }
 
-function rule(top = 28, bottom = 28) {
+export function rule(top = 28, bottom = 28) {
   return `<tr><td style="padding:${top}px 40px ${bottom}px 40px;font-size:0;line-height:0;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
 <td height="1" style="background-color:${C.lineSoft};font-size:0;line-height:1px;">&nbsp;</td>
@@ -117,7 +122,7 @@ function rule(top = 28, bottom = 28) {
 }
 
 /** Definition rows. Empty values are dropped by the caller, never rendered as "—". */
-function detailRows(pairs) {
+export function detailRows(pairs) {
   const rows = pairs
     .filter(([, v]) => String(v ?? "").trim() !== "")
     .map(

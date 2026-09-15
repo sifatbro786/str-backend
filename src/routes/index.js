@@ -9,6 +9,7 @@ import blogRoutes from "./blog.routes.js";
 import testimonialRoutes from "./testimonial.routes.js";
 import teamRoutes from "./team.routes.js";
 import inquiryRoutes from "./inquiry.routes.js";
+import graphicsQuoteRoutes from "./graphicsQuote.routes.js";
 import pageMetaRoutes from "./pageMeta.routes.js";
 import siteContentRoutes from "./siteContent.routes.js";
 import statsRoutes from "./stats.routes.js";
@@ -29,6 +30,9 @@ router.use("/blogs", blogRoutes);
 router.use("/testimonials", testimonialRoutes);
 router.use("/team", teamRoutes);
 router.use("/inquiries", inquiryRoutes);
+/* Orders placed from /graphics. Separate collection from /inquiries because a
+   work order and a lead are different records — see models/GraphicsQuote.js. */
+router.use("/graphics-quotes", graphicsQuoteRoutes);
 router.use("/page-meta", pageMetaRoutes);
 router.use("/site-content", siteContentRoutes);
 router.use("/stats", statsRoutes);

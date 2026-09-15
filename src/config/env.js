@@ -136,6 +136,26 @@ const env = {
     };
   })(),
 
+  /**
+   * Source files attached to a graphics order (POST /graphics-quotes).
+   *
+   * ⚑ NOT the same thing as `upload` above, and deliberately not sharing its
+   * numbers. Those files are written to disk and served back as marketing
+   * media; these are held in memory for one request, attached to the studio's
+   * notification and dropped — see middleware/quoteUpload.js.
+   *
+   * The ceiling that matters is the RECEIVING mail server's, not ours. Gmail
+   * refuses a message over 25MB and base64 adds about a third, so 15MB of raw
+   * attachments (≈20.5MB encoded) is the largest batch that reliably lands.
+   * Raising maxTotalBytes past ~18MB without swapping the transport for a real
+   * transactional provider does not fail loudly — it bounces the order.
+   */
+  quote: {
+    maxFiles: toInt(process.env.QUOTE_MAX_FILES, 5),
+    maxFileBytes: toInt(process.env.QUOTE_MAX_FILE_BYTES, 5 * 1024 * 1024),
+    maxTotalBytes: toInt(process.env.QUOTE_MAX_TOTAL_BYTES, 15 * 1024 * 1024),
+  },
+
   /** Company constants used by email templates (not by any API response). */
   brand: {
     legalName: process.env.BRAND_LEGAL_NAME ?? "STR Solutions Ltd.",
@@ -163,6 +183,9 @@ env.isTest = env.nodeEnv === "test";
 // inquiries are still stored. Anything mail-related checks this flag first.
 env.mail.enabled = Boolean(env.mail.host && env.mail.user && env.mail.pass);
 
-env.brand.adminInquiriesUrl = `${(process.env.ADMIN_URL ?? `${env.brand.siteUrl}/admin`).replace(/\/+$/, "")}/inquiries`;
+const adminBase = (process.env.ADMIN_URL ?? `${env.brand.siteUrl}/admin`).replace(/\/+$/, "");
+
+env.brand.adminInquiriesUrl = `${adminBase}/inquiries`;
+env.brand.adminQuotesUrl = `${adminBase}/graphics-quotes`;
 
 export default env;

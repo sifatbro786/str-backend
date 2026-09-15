@@ -41,6 +41,33 @@ export const uploadLimiter = rateLimit({
   message: { success: false, message: "Too many uploads, please try again in a few minutes." },
 });
 
+/**
+ * Public graphics order form (POST /api/graphics-quotes).
+ *
+ * Tighter than contactLimiter and deliberately so: every request on that route
+ * can carry up to 15MB of attachments that are buffered in memory and then
+ * handed to SMTP, so the cost of one submission is orders of magnitude above a
+ * JSON lead. Three per window is more than a real client needs — an order is
+ * placed once, not iterated on — and it caps the memory a single address can
+ * make this process hold at any moment.
+ *
+ * ⚑ Keyed per IP, which is what express-rate-limit does by default and what
+ * app.set("trust proxy", …) in app.js makes correct. This route is NOT behind
+ * the BFF (see the comment in GraphicsQuoteForm.jsx), so req.ip is the
+ * visitor's, not one shared origin's.
+ */
+export const quoteLimiter = rateLimit({
+  windowMs: env.rateLimit.windowMs,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message:
+      "That is a few orders in a short window. Give it a few minutes, or mail the batch over instead.",
+  },
+});
+
 /** Anti-spam limiter for the public contact form (POST /api/inquiries). */
 export const contactLimiter = rateLimit({
   windowMs: env.rateLimit.windowMs,
