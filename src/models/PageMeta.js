@@ -12,13 +12,22 @@ const pageMetaSchema = new mongoose.Schema(
       // together: this one alone rejects the write at the schema, the
       // validator alone rejects it with a 400, and the admin list alone means
       // nobody can reach the editor for it.
+      // ⚑ "portfolio" was renamed to "overview" when that route moved to
+      // /overview. Renaming the enum does NOT rewrite the stored row — the
+      // existing document keeps pageIdentifier: "portfolio", stops matching the
+      // enum and stops being reachable from the dashboard. The one-time
+      // migration that goes with this change:
+      //   db.pagemetas.updateOne(
+      //     { pageIdentifier: "portfolio" },
+      //     { $set: { pageIdentifier: "overview" } }
+      //   )
       enum: [
         "home",
         "about",
         "services",
         "projects",
-        "portfolio",
-        // The image production line. Not in the navbar, same as portfolio.
+        "overview",
+        // The image production line. Not in the navbar, same as overview.
         "graphics",
         "packages",
         "blogs",

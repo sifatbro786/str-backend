@@ -39,7 +39,9 @@ const IDENTIFIERS = [
   "about",
   "services",
   "projects",
-  "portfolio",
+  // Renamed from "portfolio" with the route. See the note on the schema enum:
+  // the stored row needs a one-time update, the enum alone does not move it.
+  "overview",
   "graphics",
   "packages",
   "blogs",
