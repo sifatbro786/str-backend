@@ -40,6 +40,7 @@ const IDENTIFIERS = [
   "services",
   "projects",
   "portfolio",
+  "graphics",
   "packages",
   "blogs",
   "contact",

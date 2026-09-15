@@ -18,6 +18,8 @@ const pageMetaSchema = new mongoose.Schema(
         "services",
         "projects",
         "portfolio",
+        // The image production line. Not in the navbar, same as portfolio.
+        "graphics",
         "packages",
         "blogs",
         "contact",
