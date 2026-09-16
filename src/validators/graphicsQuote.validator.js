@@ -12,11 +12,17 @@ import { DELIVERY_TIMES, DELIVERY_TYPES, QUOTE_STATUSES } from "../models/Graphi
  * is a security boundary rather than a preference.
  *
  * ── WHY servicesRequired IS NOT AN ENUM ──────────────────────────────────
- * Same call as Inquiry.serviceInterested. The eight passes are published from
+ * Same call as Inquiry.serviceInterested. The passes are published from
  * lib/graphics.js on the frontend and will move behind the dashboard; an enum
  * duplicated here would have to be edited in lockstep with a file in another
  * repo, and the failure mode is a 400 on a form the client filled in
- * correctly. Bounded free text instead: eight entries, 80 characters each.
+ * correctly. Bounded free text instead: ten entries, 80 characters each.
+ *
+ * ⚑ THE CEILING IS A COUNT OF CHECKBOXES, NOT A ROUND NUMBER. The order desk
+ * offers the eight published passes plus EXTRA_PASSES from
+ * str-frontend/lib/graphicsQuote.js, which is ten today. A client who ticks
+ * every box has to land inside `max`, so raise this first when a pass is added
+ * over there — the enum this avoids is gone, but the arithmetic is not.
  */
 
 /** FormData sends one field per checked box; a single box arrives as a scalar. */
@@ -60,7 +66,7 @@ export const createGraphicsQuoteRules = [
 
   body("servicesRequired")
     .customSanitizer(toArray)
-    .isArray({ min: 1, max: 8 })
+    .isArray({ min: 1, max: 10 })
     .withMessage("Pick at least one pass.")
     .bail()
     .custom((arr) => arr.every((s) => typeof s === "string" && s.trim() && s.length <= 80))
