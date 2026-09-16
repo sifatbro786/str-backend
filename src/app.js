@@ -28,16 +28,52 @@ app.disable("x-powered-by");
 // Security headers.
 app.use(helmet());
 
-// CORS — reflect only whitelisted origins; allow credentials for cookie auth.
+/**
+ * CORS — reflect only whitelisted origins; allow credentials for cookie auth.
+ *
+ * ── WHY A REJECTED ORIGIN RETURNS false AND DOES NOT THROW ───────────────
+ * Throwing here hands the error to errorHandler, which answers 500 with a JSON
+ * body and — because the cors middleware never got to add them — no CORS
+ * headers at all. The browser then reports:
+ *
+ *   "No 'Access-Control-Allow-Origin' header is present on the requested
+ *    resource"
+ *
+ * which reads like the API is broken, when the actual cause is one missing
+ * entry in CORS_ORIGINS. That message sent a real afternoon down the wrong
+ * path. `callback(null, false)` fails the request in exactly the same way for
+ * the browser, but leaves a line in the server log naming the origin that was
+ * refused AND the list it was checked against, so the next person reads the
+ * cause instead of guessing it.
+ *
+ * ⚑ CORS_ORIGINS IS PER-DEPLOYMENT. The value in the repo's .env is the local
+ * one; the API host has its own. Adding a domain here without adding it on the
+ * host fixes nothing, and the symptom is silent on the server and cryptic in
+ * the browser.
+ */
 app.use(
   cors({
     origin(origin, callback) {
+      // No Origin header: same-origin, curl, or a server-to-server call.
       if (!origin || env.corsOrigins.includes(origin)) return callback(null, true);
-      return callback(new Error(`Origin not allowed by CORS: ${origin}`));
+
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[cors] Refused origin "${origin}". CORS_ORIGINS allows: ${
+          env.corsOrigins.join(", ") || "(empty)"
+        }`
+      );
+      return callback(null, false);
     },
     credentials: true,
   })
 );
+
+/* Printed once at boot for the same reason verifyMailer() logs loudly: a CORS
+   allow-list that is wrong is invisible until a visitor's form fails, and by
+   then nobody is looking at this process's output. */
+// eslint-disable-next-line no-console
+console.log(`[cors] Allowed origins: ${env.corsOrigins.join(", ") || "(none)"}`);
 
 /**
  * Uploaded media, served straight off disk.
