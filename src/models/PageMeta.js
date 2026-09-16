@@ -12,22 +12,37 @@ const pageMetaSchema = new mongoose.Schema(
       // together: this one alone rejects the write at the schema, the
       // validator alone rejects it with a 400, and the admin list alone means
       // nobody can reach the editor for it.
-      // ⚑ "portfolio" was renamed to "overview" when that route moved to
-      // /overview. Renaming the enum does NOT rewrite the stored row — the
-      // existing document keeps pageIdentifier: "portfolio", stops matching the
-      // enum and stops being reachable from the dashboard. The one-time
-      // migration that goes with this change:
+      // ⚑ "overview" was removed from this enum. The /overview ROUTE still
+      // exists — it is kept alive for links already sent to clients — but it
+      // renders the same
+      // page as /packages and asks buildMetadata for identifier "packages", so
+      // it has no <head> of its own and no row to edit.
+      //
+      // Dropping a value does NOT rewrite the stored document. The existing
+      // row keeps pageIdentifier: "overview", stops matching this enum, and
+      // becomes unreachable from the dashboard while still sitting in the
+      // collection. Pick one, once:
+      //
+      //   // (a) the overview copy is the copy you want on /packages —
+      //   //     replaces whatever the old BDT-catalogue row said
+      //   db.pagemetas.deleteOne({ pageIdentifier: "packages" });
       //   db.pagemetas.updateOne(
-      //     { pageIdentifier: "portfolio" },
-      //     { $set: { pageIdentifier: "overview" } }
-      //   )
+      //     { pageIdentifier: "overview" },
+      //     { $set: { pageIdentifier: "packages" } }
+      //   );
+      //
+      //   // (b) you will rewrite the Packages row by hand in the dashboard
+      //   db.pagemetas.deleteOne({ pageIdentifier: "overview" });
+      //
+      // Doing neither is not fatal — /packages falls back to the code defaults
+      // in its generateMetadata — but it leaves a dead row behind, and
+      // getPageMeta swallows its own failures, so nothing will tell you.
       enum: [
         "home",
         "about",
         "services",
         "projects",
-        "overview",
-        // The image production line. Not in the navbar, same as overview.
+        // The image production line. Not in the navbar.
         "graphics",
         "packages",
         "blogs",

@@ -4,7 +4,6 @@ import authRoutes from "./auth.routes.js";
 import userRoutes from "./user.routes.js";
 import projectRoutes from "./project.routes.js";
 import serviceRoutes from "./service.routes.js";
-import packageRoutes from "./package.routes.js";
 import blogRoutes from "./blog.routes.js";
 import testimonialRoutes from "./testimonial.routes.js";
 import teamRoutes from "./team.routes.js";
@@ -23,9 +22,15 @@ router.use("/auth", authRoutes);
 router.use("/users", userRoutes);
 router.use("/projects", projectRoutes);
 router.use("/services", serviceRoutes);
-/* Public GET / is the whole /packages page in one shaped response; everything
-   below it on this router is the dashboard. See package.routes.js. */
-router.use("/packages", packageRoutes);
+/* ⚑ /packages was mounted here: a public GET returning the whole bilingual
+   pricing page in one shaped response, with the dashboard CRUD for tracks,
+   tiers and page copy under it. The route now renders static data on the
+   frontend (str-frontend/lib/pricingData.js), so the router, controller,
+   validator, the three models and the seed pair were all deleted. Two things
+   on the frontend were unmounted with it and must not come back alone: the
+   "packages" entry in the admin proxy allow-list
+   (app/api/admin/[...path]/route.js) and the "packages" revalidate tag
+   (app/api/revalidate/route.js). */
 router.use("/blogs", blogRoutes);
 router.use("/testimonials", testimonialRoutes);
 router.use("/team", teamRoutes);

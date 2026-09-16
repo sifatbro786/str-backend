@@ -39,9 +39,11 @@ const IDENTIFIERS = [
   "about",
   "services",
   "projects",
-  // Renamed from "portfolio" with the route. See the note on the schema enum:
-  // the stored row needs a one-time update, the enum alone does not move it.
-  "overview",
+  // ⚑ "overview" was removed. The route still exists but renders /packages'
+  // page and reads the "packages" row, so there is nothing to edit under its
+  // own key. The stored row needs a one-time migration — see the note on the
+  // schema enum in models/PageMeta.js; dropping the value here does not move
+  // the document.
   "graphics",
   "packages",
   "blogs",
