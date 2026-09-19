@@ -58,11 +58,22 @@ export const upsertPageMetaRules = [
     .isIn(IDENTIFIERS)
     .withMessage(`identifier must be one of: ${IDENTIFIERS.join(", ")}`),
 
+  /* ⚑ 44, not 60. The rendered <title> is NOT this field — str-frontend's
+     lib/seo.js appends " | STR Solutions" (16 characters) unless the title
+     already names the brand. A 60-character value passing this rule produced a
+     76-character title, so the form went green and the SERP still truncated.
+     44 + 16 = 60, which is the number the guidance actually refers to.
+
+     Keep this in step with TITLE_BRAND in str-frontend/lib/seo.js and with the
+     counter in str-frontend/app/(admin)/admin/page-meta/page.js. If the brand
+     string changes length, this number changes with it. */
   body("metaTitle")
     .optional({ values: "falsy" })
     .trim()
-    .isLength({ max: 60 })
-    .withMessage("Meta title should be 60 characters or fewer to avoid truncation in search"),
+    .isLength({ max: 44 })
+    .withMessage(
+      "Meta title should be 44 characters or fewer — the site appends ' | STR Solutions' (16) and Google truncates past 60"
+    ),
 
   body("metaDescription")
     .optional({ values: "falsy" })
