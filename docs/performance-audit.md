@@ -1,0 +1,269 @@
+# Performance audit — str-v2
+
+**Date:** 2026-09-20
+**Scope:** `str-backend` (Node/Express/MongoDB) + `str-frontend` (Next.js 15 App Router)
+**Method:** static read of both repos. No production profiling — Lighthouse is deliberately the LAST action item, so the baseline is measured after the known fixes land.
+
+---
+
+## Verdict at a glance
+
+| # | Item | Status | Where |
+|---|------|--------|-------|
+| 3 | Index the database | ⚠️ Probably built by accident — verify, then harden — ACTION 1 | backend |
+| 4 | Compress images | ❌ Do — ACTION 2 | frontend |
+| 8 | Split code into chunks | ⚠️ Auto-split fine; hero map leaks to client — ACTION 3 | frontend |
+| — | `API_URL` public-internet hairpin | ❌ Do — ACTION 4 | frontend env |
+| 9 | Add CDN | ❌ Do — ACTION 5 | infra |
+| 13 | Compress API payloads | ❌ Do — ACTION 6 | backend |
+| 12 | Lighthouse audit | ❌ Do LAST — ACTION 7 | infra |
+| 1 | Cache API responses | ✅ Already — ISR + tags | frontend |
+| 10 | Server-side caching | ✅ Already — same mechanism as #1 | frontend |
+| 2 | Load balancer | ✅ Skip — over-engineering at this scale | infra |
+| 5 | Loading skeletons | ✅ Skip (public); partial in admin | frontend |
+| 6 | Cache expensive queries | ✅ Skip — only admin-only aggregations | backend |
+| 7 | Debounce input handlers | ✅ Already — `useDebounced` | frontend |
+| 11 | Paginate large lists | ✅ Already — `ApiFeatures.paginate()` | backend |
+| 14 | Minify JS/CSS | ✅ Already — Next default | frontend |
+| 15 | Add lazy loading | ✅ Already — `next/image` + `priority` on LCP | frontend |
+| 16 | Defer non-critical scripts | ✅ Already — GTM `afterInteractive` | frontend |
+| 17 | DB connection pooling | ✅ Already — max 20 / min 2 | backend |
+
+Explicitly out of scope per request: N+1 queries, unnecessary re-renders, unused dependencies.
+
+---
+
+## ACTION 1 — Index management is accidental, not deliberate
+
+**Severity: medium.** Originally filed as high; corrected 2026-09-20 after checking `.env` — see "What changed" below.
+
+`src/config/db.js`:
+
+```js
+autoIndex: !env.isProd,   // prod → false
+```
+
+and `syncIndexes` / `ensureIndexes` / `createIndex` appear nowhere else in the codebase. `autoIndex: false` in prod is the right setting — index builds should not race app boot — but the deploy-time counterpart that is supposed to replace it was never written.
+
+### What changed
+
+The first read of this concluded the production database therefore had no index beyond `_id`. That is wrong here, because of a detail in the environment:
+
+- `MONGODB_URI` is Atlas — `cluster0.rt9yqps.mongodb.net/strV2`
+- **Dev and the VPS point at that same `strV2` database.**
+- Local `.env` has `NODE_ENV=development`, so locally `autoIndex` is **true**.
+
+So every `npm run dev` on a developer machine registers all ten models and builds their declared indexes — on the same database production reads. The indexes are almost certainly present, created as a side effect of someone running the dev server.
+
+### Why the script still matters
+
+Getting the right outcome by accident is not the same as managing it. Three things stay broken:
+
+1. **`autoIndex` never drops.** An index removed from a schema stays in Mongo forever, still written on every insert, still in the working set, with nothing in the codebase explaining it.
+2. **`autoIndex` fails silently.** Mongoose builds indexes through `Model.init()`, and nothing awaits it. A `unique` index that cannot build because of duplicate rows logs nothing you will notice — the constraint simply is not enforced, and you find out when a duplicate slug reaches production.
+3. **It depends on a developer running `npm run dev`.** A schema index added by someone who only ever runs against a local Mongo, or a deploy to a genuinely separate database later, gets nothing.
+
+`syncIndexes()` fixes all three: it adds, it drops, and it throws loudly.
+
+### Also worth knowing
+
+Dev and prod sharing one database is its own risk, well beyond indexes — a local seed script or a mistaken delete hits live data. Out of scope for a performance audit, but it belongs on a list somewhere.
+
+### Fix
+
+`src/scripts/syncIndexes.js` (written) + `npm run indexes:sync`. Run it as a deploy step, after `npm ci` and before the process restart.
+
+### Caveats
+
+- `syncIndexes()` **drops** any index present in Mongo but absent from the schema. That is the point, but it means the first run is the risky one — it will remove anything created by hand in Compass/Atlas. Check what exists before running.
+- If duplicate `slug` / `key` / `email` rows exist, the unique build fails and names the collection. That failure is the correct outcome — it is data that needs cleaning, not an error to route around. Given `autoIndex` has been running in dev, a duplicate would already have blocked the build silently, so this is where you would first learn about it.
+- Builds are background/non-blocking on MongoDB 4.2+, but still cost IO. Off-peak for the first run.
+- `config/env.js` exits if `MONGODB_URI` or `JWT_SECRET` is missing, so the script has to run from a directory with a populated `.env`.
+
+## ACTION 2 — Images: 27 MB in `public/`, single files up to 1.5 MB
+
+`public/` holds 62 JPG + 28 PNG. The website screenshots under `public/websites/` are PNG, topping out at `the-foxes-website.png` (1553 KB), `tigerdentourism-website.png` (1024 KB), `vera-website.png` (970 KB).
+
+**Be precise about where the cost lands.** The browser never receives these bytes — `next/image` is used everywhere (19 files, zero raw `<img>`), `formats: ["image/avif","image/webp"]` is set, and `minimumCacheTTL` is 30 days. The real costs are:
+
+1. **VPS CPU.** `sharp` re-encoding a 1.5 MB PNG on first request is slow on a small box, and that shows up as TTFB on a cold image.
+2. **Deploy weight** — 27 MB shipped on every deploy, and `.next/cache/images` grows to match.
+
+### Fix
+
+Pre-convert to WebP at build time (`scripts/optimize-public-images.mjs`, resize to max 1600px, quality 82), update references, delete the originals. Expect 27 MB → ~4 MB.
+
+Also confirm `sharp` is actually installed on the VPS:
+
+```bash
+node -e "require('sharp'); console.log('ok')"
+```
+
+Without it Next 15 degrades image optimization in production.
+
+---
+
+## ACTION 3 — The hero map ships `world-atlas` + `d3-geo` into the client bundle
+
+This is the one genuine code-splitting win; everything else Next already handles.
+
+`components/home/GeoWorldMap.jsx` is `"use client"` and imports `@/lib/heroMap`, which does:
+
+```js
+import worldTopology from "world-atlas/countries-110m.json";  // 105 KB raw
+```
+
+`LAND_PATHS`, `GRATICULE_PATH`, `SPHERE_PATH`, `MARKETS`, `RINGS` are all **module-scope constants**. So the homepage client bundle carries 105 KB of JSON plus `d3-geo` (364 KB on disk) and `topojson-client` (96 KB), purely to compute SVG path strings that are identical on every build.
+
+### Fix
+
+Precompute at build time:
+
+1. Rename `lib/heroMap.js` → `lib/heroMapGeometry.js` (unchanged).
+2. Add `scripts/build-hero-map.mjs` that imports it and writes `lib/heroMapPaths.json` with `WIDTH`, `HEIGHT`, `LAND_PATHS`, `GRATICULE_PATH`, `SPHERE_PATH`, `DISCIPLINES`, and `layout()`'s output.
+3. `lib/heroMap.js` becomes a thin re-export of that JSON.
+4. `GeoWorldMap.jsx`: replace the `layout()` call with the precomputed `LAYOUT` constant.
+5. `"prebuild": "node scripts/build-hero-map.mjs"` in `package.json`.
+6. Move `d3-geo`, `topojson-client`, `world-atlas` to `devDependencies`.
+
+`react-simple-maps` can also come out of `experimental.optimizePackageImports` — it survives only in comments.
+
+⚑ Do **not** make the map lazy or `ssr: false`. It is the LCP element on wide viewports; the existing comment in `Hero.jsx` explaining this is correct.
+
+---
+
+## ACTION 4 — `API_URL` hairpins through the public internet
+
+`.env`:
+
+```
+API_URL=https://global.strsltd.com/api/v1
+NEXT_PUBLIC_API_URL=https://global.strsltd.com/api/v1
+```
+
+`API_URL` is the **server-only** value used by `lib/apiServer.js` and the admin proxy. If Next and Express run on the same Hostinger VPS, every ISR revalidation and every admin proxy call currently goes DNS → public IP → back to the same box → Nginx TLS handshake → Express.
+
+### Fix
+
+```diff
+-API_URL=https://global.strsltd.com/api/v1
++API_URL=http://127.0.0.1:5025/api/v1
+ NEXT_PUBLIC_API_URL=https://global.strsltd.com/api/v1
+```
+
+Leave `NEXT_PUBLIC_API_URL` alone — `next.config.mjs` derives the `next/image` `remotePattern` from it, and it is what the browser calls. CORS is not a factor: server-side fetches send no `Origin` header.
+
+Only applies if both processes share a host. Verify before changing.
+
+---
+
+## ACTION 5 — CDN (Cloudflare)
+
+Proxy `strsltd.com` and `global.strsltd.com`. Free tier gives Brotli on every response (which covers most of item 13 for free), edge TLS termination, HTTP/3, and static asset caching.
+
+Cache rules:
+
+| Path | Rule |
+|------|------|
+| `/_next/image*` | Cache, edge TTL 1 month — **the highest-value rule**; it removes the image-optimizer CPU from the VPS |
+| `/uploads/*` | Cache — already served `immutable, max-age=30d` by Express |
+| `/api/*` | Bypass |
+| `/admin/*` | Bypass |
+
+---
+
+## ACTION 6 — `compression` on Express
+
+No compression middleware exists. `src/app.js`, after `helmet()`:
+
+```js
+app.use(
+  compression({
+    filter: (req, res) =>
+      !req.path.startsWith(env.upload.publicPath) && compression.filter(req, res),
+  })
+);
+```
+
+`/uploads` is excluded because those are already-compressed formats served via sendfile.
+
+Value drops once ACTION 4 lands (gzip over loopback is mostly wasted CPU), but the admin dashboard still reaches Express over the internet through the Next proxy.
+
+---
+
+## ACTION 7 — Lighthouse, last
+
+Running it before ACTIONS 1–6 produces a baseline that is obsolete the moment they land.
+
+```bash
+npx unlighthouse --site https://strsltd.com
+```
+
+covers every route in one pass. Watch LCP on `/` (the hero map), and TBT on `/` and `/graphics`.
+
+---
+
+## Skipped items — reasoning
+
+### 1 & 10 — Cache API responses / server-side caching → already solved, at the right layer
+
+`lib/apiServer.js` sets `next: { revalidate: 300, tags }` on every public fetch, and `app/api/revalidate/route.js` calls `revalidateTag()` after an admin write. Public visitors never reach Express — they hit the ISR cache. Adding a second cache inside Express would make the tag-based invalidation lie: an admin edit would bust the Next cache and still be served stale from the Express one. Actively harmful.
+
+### 2 — Load balancer → over-engineering
+
+One marketing site, one VPS. If CPU headroom is ever the issue, PM2 cluster mode is the 80%:
+
+```bash
+pm2 start server.js -i max --name str-api
+```
+
+⚑ `express-rate-limit`'s default store is per-process memory, so under clustering the effective limit multiplies by worker count. Either accept that, or move to a shared store at the same time.
+
+### 5 — Loading skeletons → mostly nothing to skeleton
+
+Public routes are prerendered/ISR; there is no loading state to fill. Admin routes are `force-dynamic` with client-side fetching, and `components/admin/DataTable.jsx` already has a skeleton. An `app/(admin)/admin/loading.js` would be ~10 lines of polish, low priority.
+
+### 6 — Cache expensive queries → nothing expensive on a hot path
+
+The only aggregations are in `stats.controller.js`, which is admin-only and low-traffic. `utils/serviceTypes.js` already has its own 60-second cache with explicit invalidation from `service.controller.js`.
+
+### 7 — Debounce → done
+
+`hooks/useResource.js` exports `useDebounced`, used in admin blogs, inquiries and graphics-quotes. Inquiry notes additionally save on blur with an 800 ms debounce.
+
+### 11 — Pagination → done
+
+`utils/ApiFeatures.js`: `defaultLimit: 12`, `maxLimit: 100`, `execWithCount()` runs the find and the count in parallel against an identical filter.
+
+One nit worth fixing whenever that file is next touched — `lib/api.js` over-fetches:
+
+```diff
+-export const getFeaturedProjects = async (limit = 4) => {
+-    const projects = await getProjects({ limit: 50 });
+-    return projects.filter((p) => p.featured).slice(0, limit);
+-};
++export const getFeaturedProjects = async (limit = 4) =>
++    (await apiFetch(`/projects?featured=true&limit=${limit}`, { tags: ["projects"] })).data;
+```
+
+### 14 — Minify → Next does it
+
+Production builds minify JS and CSS. Nothing to configure.
+
+### 15 — Lazy loading → done
+
+`next/image` lazy-loads by default. `priority` is set on exactly the two LCP images (`blogs/[slug]`, `projects/[slug]`). The hero map is deliberately eager — correct.
+
+### 16 — Defer non-critical scripts → done
+
+`components/analytics/GoogleTagManager.jsx` uses `next/script` with `strategy="afterInteractive"`.
+
+### 17 — Connection pooling → done
+
+`src/config/db.js`: `maxPoolSize: 20`, `minPoolSize: 2`, `serverSelectionTimeoutMS: 10_000`, `socketTimeoutMS: 45_000`, `family: 4`.
+
+---
+
+## Known, not worth fixing today
+
+`ApiFeatures.search()` builds an unanchored case-insensitive `$regex` `$or` across `searchFields`. That cannot use an index — it is a collection scan per keystroke-debounce. It is reached only from admin search, and the collections are small. Revisit with a `$text` index if `Project` or `Blog` passes a few thousand rows.
