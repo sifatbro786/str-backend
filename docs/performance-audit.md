@@ -10,12 +10,12 @@
 
 | # | Item | Status | Where |
 |---|------|--------|-------|
-| 3 | Index the database | ⚠️ Probably built by accident — verify, then harden — ACTION 1 | backend |
+| 3 | Index the database | ✅ **DONE 2026-09-21** — already built; zero measurable gain — ACTION 1 | backend |
 | 4 | Compress images | ❌ Do — ACTION 2 | frontend |
-| 8 | Split code into chunks | ⚠️ Auto-split fine; hero map leaks to client — ACTION 3 | frontend |
+| 8 | Split code into chunks | ✅ **DONE 2026-09-21** — hero map precomputed — ACTION 3 | frontend |
 | — | `API_URL` public-internet hairpin | ❌ Do — ACTION 4 | frontend env |
 | 9 | Add CDN | ❌ Do — ACTION 5 | infra |
-| 13 | Compress API payloads | ❌ Do — ACTION 6 | backend |
+| 13 | Compress API payloads | ⬇️ Downgraded — payloads are KB-sized. ACTION 6 | backend |
 | 12 | Lighthouse audit | ❌ Do LAST — ACTION 7 | infra |
 | 1 | Cache API responses | ✅ Already — ISR + tags | frontend |
 | 10 | Server-side caching | ✅ Already — same mechanism as #1 | frontend |
@@ -33,21 +33,48 @@ Explicitly out of scope per request: N+1 queries, unnecessary re-renders, unused
 
 ---
 
-## ACTION 1 — Index management is accidental, not deliberate
+## ACTION 1 — Index management ✅ DONE 2026-09-21 (no performance gain, and that is the finding)
 
-**Severity: medium.** Originally filed as high; corrected 2026-09-20 after checking `.env` — see "What changed" below.
+**Ran:** `indexes:check` → `indexes:sync` → `indexes:check`. Result: **0 created, 0 dropped.**
+`explain()` on the blog list confirms `IXSCAN` on `isPublished_1_publishedAt_-1`, 5 keys → 5 docs, 0 ms.
 
-`src/config/db.js`:
+### ⚑ The document counts reframe this whole audit
 
-```js
-autoIndex: !env.isProd,   // prod → false
+What the check actually printed, and the column that matters is not the indexes:
+
+```
+Blog 5 · GraphicsQuote 1 · Inquiry 5 · PageMeta 6 · Project 18
+Service 10 · SiteContent 5 · Team 12 · Testimonial 5 · User 2
 ```
 
-and `syncIndexes` / `ensureIndexes` / `createIndex` appear nowhere else in the codebase. `autoIndex: false` in prod is the right setting — index builds should not race app boot — but the deploy-time counterpart that is supposed to replace it was never written.
+**~69 documents in the entire database.** At that size an index changes nothing — a collection
+scan of 18 projects costs less than the index lookup that replaces it. The original finding
+("every public list query is a collection scan") was technically true and practically irrelevant.
 
-### What changed
+Two consequences, both of which outrank the rest of this section:
 
-The first read of this concluded the production database therefore had no index beyond `_id`. That is wrong here, because of a detail in the environment:
+1. **The database is not this site's bottleneck and no further time belongs there.** Everything
+   costly is bytes over the network: 27 MB in `public/`, a single 1.5 MB PNG — a thousand times
+   the whole database.
+2. **ACTION 6 (Express compression) is downgraded with it.** Gzipping a JSON list of 18 projects
+   saves a few KB. It is three lines, so it can still go in, but it is not a performance action.
+
+### What the work was actually worth
+
+Insurance, not speed:
+
+- if `Project` goes from 18 rows to 5,000, the indexes are already there
+- `syncIndexes` belongs in deploy, which ends the reliance on a developer running `npm run dev`
+- a duplicate `slug` now fails loudly instead of silently
+- an index dropped from a schema now leaves Mongo too
+
+Worth doing. Not worth expecting a faster site from.
+
+### Background — why the indexes already existed
+
+
+
+The first read of this concluded the production database had no index beyond `_id`. Wrong, because of a detail in the environment:
 
 - `MONGODB_URI` is Atlas — `cluster0.rt9yqps.mongodb.net/strV2`
 - **Dev and the VPS point at that same `strV2` database.**
@@ -103,34 +130,61 @@ Without it Next 15 degrades image optimization in production.
 
 ---
 
-## ACTION 3 — The hero map ships `world-atlas` + `d3-geo` into the client bundle
+## ACTION 3 — Hero map geometry moved to build time ✅ DONE 2026-09-21
 
-This is the one genuine code-splitting win; everything else Next already handles.
+`components/home/GeoWorldMap.jsx` is `"use client"` and imported `lib/heroMap.js`, which imported `world-atlas/countries-110m.json`, `d3-geo` and `topojson-client`. `LAND_PATHS`, `GRATICULE_PATH`, `SPHERE_PATH`, `MARKETS` and `RINGS` were all module-scope constants — a pure function of constants, being shipped to and re-executed by every visitor on the homepage.
 
-`components/home/GeoWorldMap.jsx` is `"use client"` and imports `@/lib/heroMap`, which does:
+### What was done
 
-```js
-import worldTopology from "world-atlas/countries-110m.json";  // 105 KB raw
-```
+| File | |
+|------|---|
+| `lib/heroMapGeometry.js` | the old `heroMap.js`, unchanged logic. Build-only. |
+| `scripts/build-hero-map.mjs` | runs it, rounds, writes the JSON, asserts the output is sane |
+| `lib/heroMapPaths.json` | generated — 162 land paths, 7 markets |
+| `lib/heroMap.js` | now a re-export of that JSON, nothing else |
+| `GeoWorldMap.jsx` | `layout()` call → precomputed `LAYOUT` |
+| `package.json` | `prebuild` + `predev` hooks; `d3-geo`, `topojson-client`, `world-atlas` → `devDependencies` |
 
-`LAND_PATHS`, `GRATICULE_PATH`, `SPHERE_PATH`, `MARKETS`, `RINGS` are all **module-scope constants**. So the homepage client bundle carries 105 KB of JSON plus `d3-geo` (364 KB on disk) and `topojson-client` (96 KB), purely to compute SVG path strings that are identical on every build.
+`heroMapGeometry.js` reads the topology through `createRequire` rather than a static JSON import. That is a guard rail as much as a convenience: a component importing that file now fails the build on `node:module` instead of silently pulling the topology back into the client bundle.
 
-### Fix
+### ⚑ The measurement corrected an assumption
 
-Precompute at build time:
+This section originally estimated "~100–140 KB off First Load JS". **That was wrong**, and the first working version of the change made the bundle *bigger*.
 
-1. Rename `lib/heroMap.js` → `lib/heroMapGeometry.js` (unchanged).
-2. Add `scripts/build-hero-map.mjs` that imports it and writes `lib/heroMapPaths.json` with `WIDTH`, `HEIGHT`, `LAND_PATHS`, `GRATICULE_PATH`, `SPHERE_PATH`, `DISCIPLINES`, and `layout()`'s output.
-3. `lib/heroMap.js` becomes a thin re-export of that JSON.
-4. `GeoWorldMap.jsx`: replace the `layout()` call with the precomputed `LAYOUT` constant.
-5. `"prebuild": "node scripts/build-hero-map.mjs"` in `package.json`.
-6. Move `d3-geo`, `topojson-client`, `world-atlas` to `devDependencies`.
+Gzipped, what the client used to carry:
 
-`react-simple-maps` can also come out of `experimental.optimizePackageImports` — it survives only in comments.
+| | gzip |
+|---|---|
+| `countries-110m.json` | 38.5 KB |
+| `d3-geo` + `topojson-client`, tree-shaken + minified | 8.8 KB |
+| **total** | **47.3 KB** |
 
-⚑ Do **not** make the map lazy or `ssr: false`. It is the LCP element on wide viewports; the existing comment in `Hero.jsx` explaining this is correct.
+And what `heroMapPaths.json` costs, by rounding precision:
 
----
+| precision | gzip | |
+|---|---|---|
+| 2 decimals | 65.8 KB | worse than what it replaces |
+| 1 decimal | 52.0 KB | still worse |
+| **0 decimals (land/graticule)** | **33.9 KB** | the win |
+
+Topology is delta-encoded integers and gzips extremely well; full-precision float path strings do not. So "precompute at build time" is an optimisation *only at the right precision* — which is why the numbers live in the build script's header rather than in a commit message.
+
+Shipped settings: land and graticule at 0 decimals (decorative outlines, ~99% of the bytes, sub-pixel in a 780×620 viewBox), the disc outline at 2 (one stroked circle, the only place rounding could show), pin and label positions at 1.
+
+### Actual result
+
+- **~13.4 KB gzipped** off the homepage
+- **all of it** — topology parse, topojson arc decoding, 162 polygons through an azimuthal-equidistant projection with a 138° clip — gone from the browser's main thread at hydration. This is the larger win, and it is the one Lighthouse scores as TBT.
+
+### Verified
+
+- `esbuild` bundle of `GeoWorldMap.jsx`: `"Topology"`, `"arcs"`, `azimuthalRaw`, `clipAntimeridian`, `geoGraticule` all **absent**; 338 SVG path commands **present**
+- precomputed `LAYOUT` vs a live `layout()` call: 7/7 markets matched, **max drift 0.048 user units** (a twentieth of a pixel), no data drift on names, distances or disciplines
+- 162 land paths, 6 tinted, zero empty `d` strings
+
+⚑ `next build` could not be run from the audit environment (`node_modules/.bin` holds Windows shims). The esbuild check above is the proxy; run `npm run build` on Windows and compare `/`'s **First Load JS** for the final confirmation.
+
+⚑ The map is still deliberately **not** lazy and not `ssr: false` — it is the LCP element on wide viewports.
 
 ## ACTION 4 — `API_URL` hairpins through the public internet
 

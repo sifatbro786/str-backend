@@ -3,10 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "STR Solutions Ltd. — API server (Node.js + Express + MongoDB, ES Modules).",
+  "description": "STR Solutions Ltd. \u2014 API server (Node.js + Express + MongoDB, ES Modules).",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "indexes:check": "node src/scripts/checkIndexes.js",
     "indexes:sync": "node src/scripts/syncIndexes.js",
     "dev": "nodemon server.js",
     "mail:check": "node src/scripts/mailCheck.js"

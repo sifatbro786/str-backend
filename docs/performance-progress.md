@@ -1,6 +1,6 @@
 # Performance work — progress & handoff
 
-**Last updated:** 2026-09-20
+**Last updated:** 2026-09-21 (rev 3)
 **Full reasoning:** `docs/performance-audit.md`. This file is only *where we are* and *what is next*.
 
 ---
@@ -14,6 +14,7 @@ Things that are not obvious from the code and that changed the advice once they 
 | Mongo is **Atlas**, `cluster0.rt9yqps.mongodb.net/strV2` | Index work can run from any machine with the prod URI. Not a VPS-only job. |
 | **Dev and the VPS share that same `strV2` database** | Local `NODE_ENV=development` → `autoIndex: true` → dev runs have been building prod indexes as a side effect. Also: a local seed or delete hits live data. |
 | Frontend is on a **Hostinger VPS**, not Vercel | `NEXT_PUBLIC_*` must be set on the box *before* `npm run build` — they are inlined at build time, not read at runtime. |
+| **~69 documents in the whole database** (Project 18, Team 12, Service 10, the rest ≤6) | The database is not a bottleneck and no more time belongs there. Everything costly is bytes over the network. Measured 2026-09-21. |
 | Backend listens on **5025** | Loopback target for ACTION 4 is `http://127.0.0.1:5025/api/v1`. |
 | `.env` is gitignored | A fresh clone needs it copied across. `str-frontend/.env.example` is current; str-backend has no example file. |
 
@@ -40,67 +41,39 @@ Local proof alone is not proof. A 100 KB bundle saving means nothing until it is
 ## Done
 
 - [x] **Audit** — `docs/performance-audit.md`. 17 items triaged: 7 actions, 10 already handled or deliberately skipped.
-- [x] **ACTION 1 code** — `src/scripts/syncIndexes.js` + `"indexes:sync"` in `package.json`.
-      Syntax-checked, model coverage verified against `src/models/` (all 10, no drift).
-      **Not yet run against Atlas.** ← this is the next thing to do
-- [x] **Audit corrected** — ACTION 1 downgraded high → medium once the shared-database setup was confirmed.
+- [x] **ACTION 1 — indexes DONE 2026-09-21.** `indexes:check` → `indexes:sync` → `indexes:check`,
+      all three run against Atlas by Sifat. **0 created, 0 dropped** — they were already built by
+      local `npm run dev` (dev has `autoIndex` on and shares the database). `explain()` confirms
+      `IXSCAN` on `isPublished_1_publishedAt_-1`.
+      **No performance gain, and that is the real finding** — see the next bullet. The work bought
+      insurance: indexes in deploy rather than by accident, loud failure on duplicates, drift removed.
+- [x] **Audit re-prioritised 2026-09-21** — the check printed document counts: ~69 rows across all
+      ten collections. At that size indexes change nothing, so ACTION 1 was never going to speed
+      anything up, and ACTION 6 (Express compression, a few KB of JSON) is downgraded with it.
+      Everything left that matters is image bytes and network.
+- [x] **Audit corrected (1)** — ACTION 1 downgraded high → medium once the shared-database setup was confirmed.
+- [x] **ACTION 3 — hero map precomputed** (str-frontend, 2026-09-21). Details in the audit. Files:
+      `lib/heroMapGeometry.js` (build-only), `scripts/build-hero-map.mjs`, `lib/heroMapPaths.json` (generated),
+      `lib/heroMap.js` (now a re-export), `GeoWorldMap.jsx`, `package.json` (`prebuild`/`predev`, three deps → dev).
+      **~13.4 KB gzipped saved, and the whole projection pass is off the browser's main thread.**
+- [x] **Audit corrected (2)** — ACTION 3's "~100–140 KB" estimate was wrong; replaced with measured numbers.
+      Worth reading that section: the first working version of the change made the bundle *bigger*, and
+      rounding precision is what decides whether it is a win at all.
 
----
+### Still owed on ACTION 3
+
+`next build` could not run in the audit environment (Windows shims in `node_modules/.bin`). On Windows:
+
+```bash
+npm run build          # prebuild regenerates the JSON automatically
+```
+
+Compare `/`'s **First Load JS** against the previous build, and eyeball the homepage map — pin
+positions moved by at most 0.05 user units, so nothing should look different.
 
 ## Next up, in order
 
-### 1. Run the index sync ← START HERE
-Cheap, and it answers a question rather than guessing at it.
-
-**Before running**, see what is actually there (Compass or mongosh, prod URI):
-```js
-db.projects.getIndexes().map(i => i.name)
-```
-- Full list (`slug_1`, `featured_1_displayOrder_1`, `serviceTypes_1_featured_-1_displayOrder_1`, …) → dev runs already built them. Script becomes a drift guard; run it anyway, expect zero drops.
-- Only `["_id_"]` → they were never built. Run it now.
-
-Then, from a directory with a populated `.env`:
-```bash
-npm run indexes:sync
-```
-Expect 10 lines, no `FAILED`, ending `Done. 10 model(s) in sync.`
-
-A duplicate-key failure is a real finding, not a script bug — clean the rows, re-run.
-
-**Proof it worked:**
-```js
-db.blogs.find({ isPublished: true }).sort({ publishedAt: -1 })
-  .explain("executionStats").executionStats
-```
-`executionStages.stage` should be `IXSCAN`/`FETCH`, not `COLLSCAN`, and `totalDocsExamined` ≈ `nReturned`.
-
-**Then wire it into deploy** — after `npm ci`, before the process restart.
-
----
-
-### 2. Hero map bundle — `str-frontend` (biggest frontend win)
-`components/home/GeoWorldMap.jsx` is `"use client"` and pulls `lib/heroMap.js`, which imports `world-atlas/countries-110m.json` (105 KB) plus `d3-geo` and `topojson-client` — all to compute SVG path strings that are identical on every build.
-
-Steps are in the audit under ACTION 3. Summary:
-1. `lib/heroMap.js` → `lib/heroMapGeometry.js` (unchanged)
-2. new `scripts/build-hero-map.mjs` writes `lib/heroMapPaths.json`
-3. `lib/heroMap.js` becomes a re-export of that JSON
-4. `GeoWorldMap.jsx`: `layout()` call → precomputed `LAYOUT`
-5. `"prebuild": "node scripts/build-hero-map.mjs"`
-6. `d3-geo`, `topojson-client`, `world-atlas` → `devDependencies`
-
-⚑ Do **not** make the map lazy or `ssr: false`. It is the LCP element on wide viewports — the comment in `Hero.jsx` is right.
-
-**Verify (local):**
-```bash
-npm run build
-grep -rl '"type":"Topology"' .next/static/chunks/   # must print nothing
-```
-Also note `/`'s **First Load JS** in the build output, before vs after.
-
----
-
-### 3. Images — `str-frontend`
+### 1. Images ← START HERE — `str-frontend`
 27 MB in `public/`, single PNGs to 1.5 MB. The browser never sees these bytes (`next/image` converts), so the cost is **VPS CPU on first optimize** and deploy weight, not user download. Pre-convert to WebP, max 1600px, q82.
 
 Also confirm sharp exists on the box: `node -e "require('sharp');console.log('ok')"`
@@ -109,7 +82,7 @@ Also confirm sharp exists on the box: `node -e "require('sharp');console.log('ok
 
 ---
 
-### 4. `API_URL` → loopback — VPS `.env` only
+### 2. `API_URL` → loopback — VPS `.env` only
 ```diff
 -API_URL=https://global.strsltd.com/api/v1
 +API_URL=http://127.0.0.1:5025/api/v1
@@ -121,23 +94,23 @@ First confirm from inside the VPS: `curl -s -o /dev/null -w "%{http_code}\n" htt
 
 ---
 
-### 5. Cloudflare — dashboard, no code
+### 3. Cloudflare — dashboard, no code
 Proxy `strsltd.com` + `global.strsltd.com`. Cache `/_next/image*` (highest value — takes the optimizer off the VPS) and `/uploads/*`; bypass `/api/*` and `/admin/*`.
 
 **Verify:** `curl -sI` twice, want `cf-cache-status: HIT` and `content-encoding: br`.
 
 ---
 
-### 6. `compression` on Express — `str-backend`
-Three lines after `helmet()`, filter excluding `env.upload.publicPath`. Diff in the audit under ACTION 6. Lower value once step 4 lands, but the admin dashboard still reaches Express over the internet.
+### 4. `compression` on Express — `str-backend` (optional now)
+Three lines after `helmet()`, filter excluding `env.upload.publicPath`. Diff in the audit under ACTION 6. ⬇️ Downgraded 2026-09-21: the API returns a few KB, so this saves a few KB. Three lines, so it can go in with something else, but do not expect it to show up in a measurement.
 
 ---
 
-### 7. Lighthouse — last
+### 5. Lighthouse — last
 ```bash
 npx unlighthouse --site https://strsltd.com
 ```
-Running it before 1–6 produces a baseline that is stale on arrival. Watch LCP on `/` and TBT on `/` and `/graphics`.
+Running it before 1–4 produces a baseline that is stale on arrival. Watch LCP on `/` and TBT on `/` and `/graphics`.
 
 ---
 
@@ -159,3 +132,7 @@ Short version — reasoning is in the audit:
 - `lib/api.js` `getFeaturedProjects()` fetches 50 projects and filters `featured` in JS. Two-line fix, diff in the audit.
 - `ApiFeatures.search()` uses an unanchored case-insensitive `$regex` — cannot use an index. Admin-only, small collections. Revisit with a `$text` index past a few thousand rows.
 - **Dev and prod share one Atlas database.** Not a performance issue; is a real risk.
+- **`Project` carries 8 indexes for 18 rows.** `featured_1` and `displayOrder_1` are both covered
+  by the `featured_1_displayOrder_1` prefix, and `serviceTypes_1` by the three-field compound.
+  Indexes cost write throughput and RAM, so this is redundant — but at 18 rows it is redundant by
+  a rounding error. Worth trimming only if these collections ever get large.
