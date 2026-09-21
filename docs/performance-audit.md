@@ -11,7 +11,7 @@
 | # | Item | Status | Where |
 |---|------|--------|-------|
 | 3 | Index the database | ✅ **DONE 2026-09-21** — already built; zero measurable gain — ACTION 1 | backend |
-| 4 | Compress images | ❌ Do — ACTION 2 | frontend |
+| 4 | Compress images | ✅ **DONE 2026-09-21** — 33.9 MB → 8.3 MB — ACTION 2 | frontend |
 | 8 | Split code into chunks | ✅ **DONE 2026-09-21** — hero map precomputed — ACTION 3 | frontend |
 | — | `API_URL` public-internet hairpin | ❌ Do — ACTION 4 | frontend env |
 | 9 | Add CDN | ❌ Do — ACTION 5 | infra |
@@ -107,28 +107,61 @@ Dev and prod sharing one database is its own risk, well beyond indexes — a loc
 - Builds are background/non-blocking on MongoDB 4.2+, but still cost IO. Off-peak for the first run.
 - `config/env.js` exits if `MONGODB_URI` or `JWT_SECRET` is missing, so the script has to run from a directory with a populated `.env`.
 
-## ACTION 2 — Images: 27 MB in `public/`, single files up to 1.5 MB
+## ACTION 2 — Images ✅ DONE 2026-09-21
 
-`public/` holds 62 JPG + 28 PNG. The website screenshots under `public/websites/` are PNG, topping out at `the-foxes-website.png` (1553 KB), `tigerdentourism-website.png` (1024 KB), `vera-website.png` (970 KB).
+`public/` was **33.9 MB** across 77 photos — website screenshots stored as PNG, topping out at
+`the-foxes-website.png` at 1.55 MB. All 77 converted to WebP, originals deleted, 146 code
+references rewritten.
 
-**Be precise about where the cost lands.** The browser never receives these bytes — `next/image` is used everywhere (19 files, zero raw `<img>`), `formats: ["image/avif","image/webp"]` is set, and `minimumCacheTTL` is 30 days. The real costs are:
+**Result: 33.9 MB → 8.3 MB (24%).**
 
-1. **VPS CPU.** `sharp` re-encoding a 1.5 MB PNG on first request is slow on a small box, and that shows up as TTFB on a cold image.
-2. **Deploy weight** — 27 MB shipped on every deploy, and `.next/cache/images` grows to match.
+| folder | before | after | |
+|---|---|---|---|
+| `websites/` | 10.9 MB | 892 KB | **8%** — PNG screenshots were the worst offenders |
+| `graphics/` | 12.9 MB | 4.5 MB | 35% |
+| `2d-3d/` | 1.9 MB | 1.6 MB | 83% — already-efficient JPEGs |
+| `digital/` | 724 KB | 512 KB | 71% |
+| `footer.png` | 392 KB | 200 KB | 51% |
 
-### Fix
+### Quality is not uniform, and that is deliberate
 
-Pre-convert to WebP at build time (`scripts/optimize-public-images.mjs`, resize to max 1600px, quality 82), update references, delete the originals. Expect 27 MB → ~4 MB.
+`public/graphics` is the before/after gallery for STR's **photo-retouching service**. Visible
+compression artifacts there do not just look bad — they argue against the thing being sold. So
+it got the most generous setting, and at these file sizes that costs almost nothing.
 
-Also confirm `sharp` is actually installed on the VPS:
+| target | quality | max dim | why |
+|---|---|---|---|
+| `graphics/` | 92 | 1920 | the retouching showcase — artifacts here undermine the pitch |
+| `2d-3d/`, `digital/` | 90 | 1920 / 1600 | architectural renders; visual quality is the product |
+| `websites/` | 88 | 1600 | screenshots shown in cards; contains text, so not lower |
+| `footer.png` | 92 | none | payment-logo strip, 5011×587, needs crispness — alpha verified preserved |
 
-```bash
-node -e "require('sharp'); console.log('ok')"
-```
+1600 px matches the real demand: the widest `sizes` is `760px`/`55vw`, which at 2× DPR asks for
+about 1580 px. `graphics/` gets 1920 for headroom on large displays.
 
-Without it Next 15 degrades image optimization in production.
+### Deliberately NOT converted
 
----
+- `strshort.png` — favicon and `apple-touch-icon`. iOS does not reliably accept WebP here.
+- `logo.png` — 12 KB, also `MEDIA_FALLBACK` in `lib/utils.js`. Nothing to gain.
+- `public/logo/` (164 KB), `public/fonts/`, `public/video/` — too small to matter, or not images.
+
+No static Open Graph image exists (`app/api/og` generates them), so no social-preview risk.
+
+### Verified
+
+- 77 originals → 77 valid WebP, **0 missing, 0 corrupt, 0 upscaled**; alpha preserved on `footer`
+- 146 references rewritten across `catalogue.js`, `graphics.js`, `data.js`, `site.js`, `utils.js`
+- **0 stale `.png`/`.jpg` references** to the converted folders
+- every referenced `.webp` resolves to a file on disk; **0 unreferenced** WebP left behind
+- `logo.png` / `strshort.png` references confirmed intact
+- all five modified files pass `node --check`
+
+⚑ 12 broken image references exist in the repo, all **pre-existing** and confirmed in `git HEAD`
+before this change: nine team photos (`/ceo.jpg`, `/arif.jpg`, …) referenced only by the dead
+`lib/data.js`, and three `/uploads/...` paths that are doc-comment examples pointing at the API
+host rather than `public/`.
+
+⚑ `next build` still needs running on Windows — see ACTION 3's note.
 
 ## ACTION 3 — Hero map geometry moved to build time ✅ DONE 2026-09-21
 

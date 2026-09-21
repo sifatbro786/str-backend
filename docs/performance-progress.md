@@ -1,6 +1,6 @@
 # Performance work — progress & handoff
 
-**Last updated:** 2026-09-21 (rev 3)
+**Last updated:** 2026-09-21 (rev 4)
 **Full reasoning:** `docs/performance-audit.md`. This file is only *where we are* and *what is next*.
 
 ---
@@ -60,29 +60,33 @@ Local proof alone is not proof. A 100 KB bundle saving means nothing until it is
       Worth reading that section: the first working version of the change made the bundle *bigger*, and
       rounding precision is what decides whether it is a win at all.
 
-### Still owed on ACTION 3
+- [x] **ACTION 2 — images DONE 2026-09-21.** 77 photos → WebP, originals deleted, 146 references
+      rewritten. **`public/` 33.9 MB → 8.3 MB.** Quality deliberately uneven: `graphics/` at q92
+      because it is the retouching showcase and artifacts there argue against the service being
+      sold; `websites/` at q88; `footer.png` at q92 with alpha preserved. Favicon (`strshort.png`)
+      and `logo.png` left as PNG on purpose. Details and the verification list are in the audit.
 
-`next build` could not run in the audit environment (Windows shims in `node_modules/.bin`). On Windows:
+### Still owed — one Windows command covers both
+
+`next build` cannot run in the audit environment (Windows shims in `node_modules/.bin`). On Windows:
 
 ```bash
-npm run build          # prebuild regenerates the JSON automatically
+npm run build
+npm start
 ```
 
-Compare `/`'s **First Load JS** against the previous build, and eyeball the homepage map — pin
-positions moved by at most 0.05 user units, so nothing should look different.
+Checks both ACTION 2 and ACTION 3 at once:
+
+- build completes with no missing-image errors
+- `/`'s **First Load JS** vs the previous build (hero map)
+- homepage map looks unchanged (pins moved ≤0.05 user units)
+- `/graphics` before/after sliders — this is the **retouching showcase**, so look at it properly
+  rather than glancing. If anything reads soft, raise q92 in the conversion and redo that folder.
+- `/projects`, `/about`, and the footer payment strip render
 
 ## Next up, in order
 
-### 1. Images ← START HERE — `str-frontend`
-27 MB in `public/`, single PNGs to 1.5 MB. The browser never sees these bytes (`next/image` converts), so the cost is **VPS CPU on first optimize** and deploy weight, not user download. Pre-convert to WebP, max 1600px, q82.
-
-Also confirm sharp exists on the box: `node -e "require('sharp');console.log('ok')"`
-
-**Verify:** `du -sh public` (27M → ~4M), then cold vs warm `curl -w "%{time_total}"` against a `/_next/image?...` URL.
-
----
-
-### 2. `API_URL` → loopback — VPS `.env` only
+### 1. `API_URL` ← START HERE → loopback — VPS `.env` only
 ```diff
 -API_URL=https://global.strsltd.com/api/v1
 +API_URL=http://127.0.0.1:5025/api/v1
@@ -94,23 +98,23 @@ First confirm from inside the VPS: `curl -s -o /dev/null -w "%{http_code}\n" htt
 
 ---
 
-### 3. Cloudflare — dashboard, no code
+### 2. Cloudflare — dashboard, no code
 Proxy `strsltd.com` + `global.strsltd.com`. Cache `/_next/image*` (highest value — takes the optimizer off the VPS) and `/uploads/*`; bypass `/api/*` and `/admin/*`.
 
 **Verify:** `curl -sI` twice, want `cf-cache-status: HIT` and `content-encoding: br`.
 
 ---
 
-### 4. `compression` on Express — `str-backend` (optional now)
+### 3. `compression` on Express — `str-backend` (optional now)
 Three lines after `helmet()`, filter excluding `env.upload.publicPath`. Diff in the audit under ACTION 6. ⬇️ Downgraded 2026-09-21: the API returns a few KB, so this saves a few KB. Three lines, so it can go in with something else, but do not expect it to show up in a measurement.
 
 ---
 
-### 5. Lighthouse — last
+### 4. Lighthouse — last
 ```bash
 npx unlighthouse --site https://strsltd.com
 ```
-Running it before 1–4 produces a baseline that is stale on arrival. Watch LCP on `/` and TBT on `/` and `/graphics`.
+Running it before 1–3 produces a baseline that is stale on arrival. Watch LCP on `/` and TBT on `/` and `/graphics`.
 
 ---
 
@@ -131,6 +135,12 @@ Short version — reasoning is in the audit:
 - `str-backend/.env` `CORS_ORIGINS` still lists `str-frontend-rho.vercel.app` — leftover from the Vercel deploy. Harmless, but stale.
 - `lib/api.js` `getFeaturedProjects()` fetches 50 projects and filters `featured` in JS. Two-line fix, diff in the audit.
 - `ApiFeatures.search()` uses an unanchored case-insensitive `$regex` — cannot use an index. Admin-only, small collections. Revisit with a `$text` index past a few thousand rows.
+- **`lib/data.js` is dead code.** Nothing imports it, and two comments elsewhere (`lib/api.js`,
+  `app/(public)/page.js`) state it was deleted — it was not. It carries ~46 stale image references
+  and nine broken team-photo paths (`/ceo.jpg`, `/arif.jpg`, …) that have never existed in
+  `public/`. Its references were updated alongside the rest so the file stays coherent, but it
+  should probably just go. Two WebP files (`innoel-website`, `paarel-website`) are referenced by
+  nothing else and would become orphans with it.
 - **Dev and prod share one Atlas database.** Not a performance issue; is a real risk.
 - **`Project` carries 8 indexes for 18 rows.** `featured_1` and `displayOrder_1` are both covered
   by the `featured_1_displayOrder_1` prefix, and `serviceTypes_1` by the three-field compound.
