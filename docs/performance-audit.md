@@ -176,9 +176,25 @@ host rather than `public/`.
 | `lib/heroMapPaths.json` | generated — 162 land paths, 7 markets |
 | `lib/heroMap.js` | now a re-export of that JSON, nothing else |
 | `GeoWorldMap.jsx` | `layout()` call → precomputed `LAYOUT` |
-| `package.json` | `prebuild` + `predev` hooks; `d3-geo`, `topojson-client`, `world-atlas` → `devDependencies` |
+| `package.json` | `prebuild` + `predev` hooks |
 
 `heroMapGeometry.js` reads the topology through `createRequire` rather than a static JSON import. That is a guard rail as much as a convenience: a component importing that file now fails the build on `node:module` instead of silently pulling the topology back into the client bundle.
+
+### ⚑ Reverted 2026-09-22: the three build-only packages stay in `dependencies`
+
+They were moved to `devDependencies` on the first pass. That was wrong twice over:
+
+1. **It saved nothing.** What lands in a client bundle is decided by what the code imports, not by
+   which `package.json` section a package sits in. The bytes were already gone the moment
+   `GeoWorldMap.jsx` stopped importing them.
+2. **It could break the deploy.** `prebuild` imports `d3-geo`, `topojson-client` and `world-atlas`
+   at build time. Any deploy that runs `npm ci --omit=dev` (or `--production`, or with
+   `NODE_ENV=production`) before `npm run build` would install neither, and the build would crash
+   on the first import — on the server, at deploy time, which is the worst place to find out.
+
+A deploy that cannot break is worth more than three packages of `node_modules`. They are back in
+`dependencies`; the `createRequire` guard in `heroMapGeometry.js` is what actually prevents the
+regression, and it is unaffected.
 
 ### ⚑ The measurement corrected an assumption
 

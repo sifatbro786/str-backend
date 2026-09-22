@@ -1,6 +1,6 @@
 # Performance work — progress & handoff
 
-**Last updated:** 2026-09-21 (rev 4)
+**Last updated:** 2026-09-22 (rev 5)
 **Full reasoning:** `docs/performance-audit.md`. This file is only *where we are* and *what is next*.
 
 ---
@@ -54,7 +54,7 @@ Local proof alone is not proof. A 100 KB bundle saving means nothing until it is
 - [x] **Audit corrected (1)** — ACTION 1 downgraded high → medium once the shared-database setup was confirmed.
 - [x] **ACTION 3 — hero map precomputed** (str-frontend, 2026-09-21). Details in the audit. Files:
       `lib/heroMapGeometry.js` (build-only), `scripts/build-hero-map.mjs`, `lib/heroMapPaths.json` (generated),
-      `lib/heroMap.js` (now a re-export), `GeoWorldMap.jsx`, `package.json` (`prebuild`/`predev`, three deps → dev).
+      `lib/heroMap.js` (now a re-export), `GeoWorldMap.jsx`, `package.json` (`prebuild`/`predev`).
       **~13.4 KB gzipped saved, and the whole projection pass is off the browser's main thread.**
 - [x] **Audit corrected (2)** — ACTION 3's "~100–140 KB" estimate was wrong; replaced with measured numbers.
       Worth reading that section: the first working version of the change made the bundle *bigger*, and
@@ -65,6 +65,11 @@ Local proof alone is not proof. A 100 KB bundle saving means nothing until it is
       because it is the retouching showcase and artifacts there argue against the service being
       sold; `websites/` at q88; `footer.png` at q92 with alpha preserved. Favicon (`strshort.png`)
       and `logo.png` left as PNG on purpose. Details and the verification list are in the audit.
+
+- [x] **Reverted 2026-09-22** — `d3-geo`, `topojson-client`, `world-atlas` moved back to
+      `dependencies`. Putting them in `devDependencies` saved no bytes (the bundle is decided by
+      imports, not by `package.json` sections) and would crash `prebuild` on any deploy that runs
+      `npm ci --omit=dev` before `npm run build`.
 
 ### Still owed — one Windows command covers both
 
