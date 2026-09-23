@@ -79,6 +79,28 @@ const SHARED = [
     .isLength({ max: 160 })
     .withMessage("Each feature must be 160 characters or fewer"),
 
+  /* ⚑ 44, not 60. str-frontend/lib/seo.js → withBrand appends " | STR
+     Solutions" (16 chars) to whatever is stored, against a ~60-character
+     display budget. Mirrored in validators/pageMeta.validator.js and in
+     TITLE_MAX in str-frontend/app/(admin)/admin/services/page.js — all three
+     move together.
+
+     `optional({ values: "falsy" })` and not plain `.optional()`: clearing the
+     field posts "", and a plain optional still runs the length rule on it.
+     Nothing truncates — the counter in the form is where an over-long title
+     gets discussed, not here. */
+  body("metaTitle")
+    .optional({ values: "falsy" })
+    .trim()
+    .isLength({ max: 44 })
+    .withMessage("Meta title must be 44 characters or fewer — the brand suffix takes the rest"),
+
+  body("metaDescription")
+    .optional({ values: "falsy" })
+    .trim()
+    .isLength({ max: 160 })
+    .withMessage("Meta description must be 160 characters or fewer"),
+
   body("order").optional().isInt({ min: 0, max: 9999 }).toInt(),
   body("isActive").optional().isBoolean().toBoolean(),
 

@@ -36,6 +36,25 @@ const serviceSchema = new mongoose.Schema(
      */
     imageAlt: { type: String, trim: true, default: "", maxlength: 160 },
 
+    /**
+     * Per-service SEO overrides.
+     *
+     * ⚑ These are not new requirements — str-frontend's service detail page
+     * has been reading `service.metaTitle || service.title` since it was
+     * written, and its comment says "the admin service form already edits"
+     * them. It did not, and these fields did not exist, so only the fallback
+     * branch ever ran and every service page was titled with its own heading.
+     *
+     * Shape matches Project.js. No maxlength here on purpose: the display
+     * budget is a DESIGN cap, so it lives in validators/service.validator.js
+     * where the admin form can show the author a message instead of a 500.
+     * Empty means "fall back to title / shortDescription", which stays the
+     * right default — an override is for when the on-page copy is the wrong
+     * thing to show in a search result, not for every record.
+     */
+    metaTitle: { type: String, trim: true, default: "" },
+    metaDescription: { type: String, trim: true, default: "" },
+
     featuresList: { type: [String], default: [] },
     deliverableTimeline: { type: String, default: "" },
     order: { type: Number, default: 0, index: true },
