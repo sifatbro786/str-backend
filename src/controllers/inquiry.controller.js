@@ -12,7 +12,11 @@ import { dispatchInquiryMails } from "../services/inquiryMail.service.js";
  * See services/inquiryMail.service.js for why that ordering is deliberate.
  */
 export const createInquiry = asyncHandler(async (req, res) => {
-  const doc = await Inquiry.create(req.body);
+  /* Whitelist, never req.body. This route is public: passing the body
+     straight through let anyone set `status`, `notes` or `budgetRange` on
+     their own lead. */
+  const { senderName, senderEmail, phone, serviceInterested, message } = req.body;
+  const doc = await Inquiry.create({ senderName, senderEmail, phone, serviceInterested, message });
 
   res.status(201).json({ success: true, data: doc });
 
