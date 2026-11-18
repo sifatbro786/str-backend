@@ -10,7 +10,8 @@
     "indexes:check": "node src/scripts/checkIndexes.js",
     "indexes:sync": "node src/scripts/syncIndexes.js",
     "dev": "nodemon server.js",
-    "mail:check": "node src/scripts/mailCheck.js"
+    "mail:check": "node src/scripts/mailCheck.js",
+    "seed:recent": "node src/seed/recentProjects.seed.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
